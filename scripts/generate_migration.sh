@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+# to install flyway on server--> sudo snap install flyway
+# run-cmd--> ./scripts/generate_migration.sh migration_name
+# in case permission denied run--> chmod +x scripts/generate_migration.sh
+
+set -e
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <migration_name>"
+  exit 1
+fi
+
+OUTPUT="$(dirname "$(dirname "$0")")/src/main/resources/db/migration/V$(date +%Y%m%d%H%M%S)__$1.sql"
+
+touch "$OUTPUT"
+echo "Migration created at $OUTPUT"
