@@ -13,13 +13,6 @@ public class UserController {
 
     private final UserService userService;
 
-//     @PutMapping("/activate")
-//     public ResponseEntity<Void> activateUserRegistration(@RequestBody ActivateUserRequestDto activateUserRequestDto) {
-//         RegistrationResponse response = userService.activateUserAccount(userId);
-//         return ResponseEntity.ok(response);
-//     }
-
-
     @GetMapping("validate-email")
     public ResponseEntity<Map<Object,Object>> validateUserEmail(@RequestParam String email) {
         return ResponseEntity.ok().body(Map.of("isExist", this.userService.validateEmail(email)));

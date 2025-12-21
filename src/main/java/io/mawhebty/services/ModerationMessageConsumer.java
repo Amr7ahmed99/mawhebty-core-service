@@ -13,7 +13,7 @@ public class ModerationMessageConsumer {
     private final SqsService sqsService;
     private final ModerationQueueService moderationService;
 
-    @Scheduled(fixedDelay = 30000) // Run every 30 seconds
+//    @Scheduled(fixedDelay = 30000) // Run every 30 seconds
     public void processModerationMessages() {
         log.info("Checking for moderation messages...");
         

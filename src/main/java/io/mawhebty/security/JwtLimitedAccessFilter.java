@@ -114,7 +114,11 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
         "/api/v1/auth/login", 
         "/api/v1/auth/verify-otp",
         "/api/v1/auth/refresh-token",
-        "/api/v1/public/"
+        "/api/v1/public/",
+        "/oauth2/authorization",
+        "/login/oauth2/code",
+        "/oauth2/callback",
+        "/login" // spring uses it internally
     );
     
     @Override
@@ -123,14 +127,20 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
         
         String path = request.getRequestURI();
-        String method = request.getMethod();
+
+        if (path.startsWith("/api/v1/internal-services/core/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         
         // Skip filter for public endpoints
         if (isPublicEndpoint(path)) {
             filterChain.doFilter(request, response);
             return;
         }
-        
+
+        String method = request.getMethod();
+
         // Extract token from Authorization header
         String token = extractTokenFromRequest(request);
         

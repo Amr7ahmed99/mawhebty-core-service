@@ -1,7 +1,9 @@
 package io.mawhebty.services;
 
+import io.mawhebty.dtos.requests.InternalServices.ModerateUserRequestDto;
 import io.mawhebty.dtos.requests.TalentSpecialCaseRequest;
 import io.mawhebty.enums.MediaModerationStatusEnum;
+import io.mawhebty.enums.ModerationTypeEnum;
 import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.exceptions.ResourceNotFoundException;
 import io.mawhebty.exceptions.UserNotFoundException;
@@ -28,7 +30,7 @@ public class TalentSpecialCaseService {
     public void createSpecialCase(TalentSpecialCaseRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UserNotFoundException());
+                .orElseThrow(UserNotFoundException::new);
 
         if (talentSpecialCaseRepository.existsByUserId(user.getId())) {
             throw new IllegalStateException("Special case already exists for this user.");
@@ -55,12 +57,12 @@ public class TalentSpecialCaseService {
                 user.getId(),
                 user.getRole().getId(),
                 "SPECIAL_CASE_DOCUMENT",
-                "TALENT_SPECIAL_CASE",
+                ModerationTypeEnum.DOCUMENT_VERIFICATION.name(),
                 specialCase.getId(),
                 fileUrl
         );
 
-        // in case the message successfully delivered to sqs, create post status
+        // in case the message successfully delivered to sqs, create moderation record
         if(messageWasSent){
             // create moderation record for this specialCase
             MediaModerationStatus status= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.PENDING.getName())
@@ -74,5 +76,34 @@ public class TalentSpecialCaseService {
             talentSpecialCaseRepository.save(specialCase);
         }
 
+    }
+
+    public void moderateSpecialCase(ModerateUserRequestDto request){
+        // create moderation record for this specialCase
+        MediaModerationStatus pendingStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.PENDING.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("PENDING status not found"));
+
+        MediaModeration media= mediaModerationRepository.findById(request.getMediaId())
+                .orElseThrow(()-> new BadDataException("no moderation found with id: "+ request.getMediaId()));
+
+        if(!pendingStatus.getName().equals(media.getStatus().getName())){
+            throw new IllegalStateException("can not "+ request.getDecision() +" "+ request.getFileType() +", media is not pending for moderation.");
+        }
+
+        if("approved".equals(request.getDecision())){
+            MediaModerationStatus approvedStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.APPROVED.getName())
+                    .orElseThrow(() -> new ResourceNotFoundException("APPROVED status not found"));
+            media.setStatus(approvedStatus);
+        }else if("rejected".equals(request.getDecision()) && request.getReason() != null && !request.getReason().isBlank()){
+            MediaModerationStatus rejectedStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.REJECTED.getName())
+                    .orElseThrow(() -> new ResourceNotFoundException("REJECTED status not found"));
+            media.setStatus(rejectedStatus);
+            media.setReason(request.getReason());
+        }else {
+            throw new BadDataException("unsupported decision: "+ request.getDecision());
+        }
+
+
+        mediaModerationRepository.save(media);
     }
 }

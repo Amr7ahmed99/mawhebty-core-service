@@ -1,16 +1,13 @@
 package io.mawhebty.services;
 
 import io.mawhebty.enums.UserTypeEnum;
+import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.*;
+import io.mawhebty.repository.*;
 import org.springframework.stereotype.Service;
 
 import io.mawhebty.dtos.requests.DraftRegistrationRequest;
 import io.mawhebty.exceptions.ResourceNotFoundException;
-import io.mawhebty.repository.GenderRepository;
-import io.mawhebty.repository.ResearcherProfileRepository;
-import io.mawhebty.repository.TalentCategoryRepository;
-import io.mawhebty.repository.TalentProfileRepository;
-import io.mawhebty.repository.UserTypeRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -19,18 +16,20 @@ public class UserProfileService {
 
     private final TalentProfileRepository talentProfileRepository;
     private final ResearcherProfileRepository researcherProfileRepository;
-    private final TalentCategoryRepository talentCategoryRepository;
+    private final ParticipationTypeRepository participationTypeRepository;
     private final GenderRepository genderRepository;
     private final UserTypeRepository userTypeRepository;
 
     public TalentProfile createTalentProfile(User user, DraftRegistrationRequest request, TalentCategory talentCategory, TalentSubCategory talentSubCategory) {
         TalentProfile profile = new TalentProfile();
+        ParticipationType type = participationTypeRepository.findById(request.getParticipationTypeId())
+                .orElseThrow(()-> new BadDataException("Invalid participation type with id: " + request.getParticipationTypeId()));
         profile.setUser(user);
         profile.setFullName(request.getFirstName() + " " + request.getLastName());
         profile.setCountry(request.getCountry());
         profile.setCity(request.getCity());
         profile.setAge(request.getAge());
-        profile.setParticipationTypeId(request.getParticipationTypeId());// project_idea, personal_talent, patent
+        profile.setParticipationType(type);
         profile.setCategory(talentCategory);
         profile.setSubCategory(talentSubCategory);
 

@@ -29,8 +29,6 @@ public class TalentProfile extends BaseEntity {
     @ToString.Include
     private String fullName;
 
-
-
     @Column(name = "country", nullable = false)
     @ToString.Include
     private String country;
@@ -50,8 +48,9 @@ public class TalentProfile extends BaseEntity {
 
     private String profilePicture;
 
-    @Column(name = "participation_type_id", nullable = false)
-    private Integer participationTypeId; // project_idea, personal_talent, patent
+    @ManyToOne
+    @JoinColumn(name = "participation_type_id", nullable = false)
+    private ParticipationType participationType;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -63,15 +62,8 @@ public class TalentProfile extends BaseEntity {
     @JsonIgnore
     private TalentSubCategory subCategory;
 
-//    @OneToMany(mappedBy = "talentProfile", cascade = CascadeType.ALL, orphanRemoval = true)
-//    @JsonIgnore
-//    @ToString.Exclude
-//    @EqualsAndHashCode.Exclude
-//    private List<TalentAttribute> talentAttributes = new ArrayList<>();
-
     @OneToMany(mappedBy = "talentProfile", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @Builder.Default
     private List<TalentCategoryFormValue> formValues = new ArrayList<>();
-
 }

@@ -164,8 +164,18 @@ public class S3Service {
      */
     public boolean isVideoFile(MultipartFile file) {
         String contentType = file.getContentType();
-        return contentType != null && contentType.startsWith("video/");
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null) return false;
+
+        String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+
+        boolean extCheck = ext.matches("(mp4|mov|avi|mkv|wmv|flv)");
+        boolean typeCheck = contentType != null && contentType.startsWith("video/");
+
+        return extCheck || typeCheck;
     }
+
 
     /**
      * Check if file is a document

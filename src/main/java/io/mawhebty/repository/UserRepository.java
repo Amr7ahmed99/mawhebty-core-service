@@ -18,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByPhone(String phone);
 
+    @Query("SELECT u FROM User u JOIN FETCH u.status WHERE u.email = :email")
+    Optional<User> findByEmailFetchStatus(String email);
+
+
     @Query(value = """
         SELECT 
             tp.id AS talentProfileId, 

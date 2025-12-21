@@ -36,7 +36,7 @@ public class RegistrationValidationService {
 
         // extract keys and values from talentCategoryForm
         ObjectMapper mapper = new ObjectMapper();
-        Map<Integer, Object> talentCategoryFormMap = null;
+        Map<Integer, Object> talentCategoryFormMap;
         try {
             talentCategoryFormMap = mapper.readValue(
                     request.getTalentCategoryForm(),
@@ -74,38 +74,6 @@ public class RegistrationValidationService {
         if (request.getParticipationTypeId() == null) {
             throw new BadDataException("Talent must have participation type");
         }
-
-        boolean validParticipationType = false;
-        for (ParticipationTypesEnum type : ParticipationTypesEnum.values()) {
-            if (request.getParticipationTypeId().equals(type.getId())) {
-                validParticipationType = true;
-                break;
-            }
-        }
-
-        if (!validParticipationType) {
-            throw new BadDataException("Invalid participation type id: " + request.getParticipationTypeId());
-        }
-
-
-
-
-        // validate attributes
-//        if (request.getTalentAttributes() != null && !request.getTalentAttributes().isEmpty()) {
-//
-//            List<Attributes> foundAttributes = attributesRepository.findByIdsAndCategoryId(
-//                    request.getTalentAttributes(),
-//                    request.getCategoryId()
-//            );
-//
-//            if (foundAttributes.size() != request.getTalentAttributes().size()) {
-//                throw new BadDataException(
-//                        "Some attributes are not compatible with this category/subCategory: " + request.getCategoryId()
-//                );
-//            }
-//
-//            attributes.addAll(foundAttributes);
-//        }
     }
 
     public void validateResearcherRegistration(DraftRegistrationRequest request) {
@@ -137,11 +105,11 @@ public class RegistrationValidationService {
             return;
         }
 
-        if(!isIndividualResearcher && !fileIsNotNull){
+        if(!fileIsNotNull){
             throw new CompanyDocumentRequiredException(request.getCompanyName());
         }
 
-        boolean isMediaFile = fileIsNotNull && (s3Service.isImageFile(request.getFile()) || s3Service.isVideoFile(request.getFile()));
+        boolean isMediaFile = (s3Service.isImageFile(request.getFile()) || s3Service.isVideoFile(request.getFile()));
         if (isMediaFile){
             throw new BadDataException("The uploaded file must be (doc/pdf)");
         }

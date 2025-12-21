@@ -7,7 +7,9 @@ import javax.crypto.SecretKey;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mawhebty.dtos.responses.TokenResponse;
 import io.mawhebty.enums.PermissionEnum;
+import io.mawhebty.models.UserStatus;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -42,29 +44,31 @@ public class JWTService {
 
     private final UserRepository userRepository;
 
-    public String generateToken(Long userId, UserRole role, String tokenType) {
+    public String generateToken(Long userId, String email, UserRole role, String tokenType) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException(userId));
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("email", email);
         claims.put("role", role.getName());
         claims.put("tokenType", tokenType);
         claims.put("userStatus", user.getStatus().getName());
         claims.put("permissions", "LIMITED_ACCESS".equals(tokenType)? getLimitedPermissions(role): getFullPermissions(role));
 
-        return buildToken(claims, userId.toString(), accessTokenExpiration);
+        return buildToken(claims, userId.toString(), email, accessTokenExpiration);
     }
 
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(Long userId, String email) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("tokenType", "REFRESH");
         claims.put("userId", userId);
+        claims.put("email", email);
 
-        return buildToken(claims, userId.toString(), refreshTokenExpiration);
+        return buildToken(claims, userId.toString(), email, refreshTokenExpiration);
     }
 
-    private String buildToken(Map<String, Object> claims, String subject, Long expiration) {
+    private String buildToken(Map<String, Object> claims, String subject, String email,  Long expiration) {
         long now = System.currentTimeMillis();
 
         return Jwts.builder()
@@ -74,6 +78,16 @@ public class JWTService {
             .setExpiration(new Date(now + expiration))
             .signWith(getSigningKey(), SignatureAlgorithm.HS256)
             .compact();
+    }
+
+    public ResponseCookie buildCookieForRefreshToken(String refreshToken) {
+        return ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)// JS cannot read it (protects from XSS)
+                .secure(false) // use false on localhost, true only in prod (HTTPS)
+                .sameSite("Strict") // required for cross-site cookies (React 3000 ↔ Spring 8080)
+                .path("/api/auth/refresh-token")
+                .maxAge(refreshTokenExpiration)
+                .build();
     }
 
     // ========== TOKEN VALIDATION METHODS ==========
@@ -100,6 +114,7 @@ public class JWTService {
 
     public boolean isRefreshToken(String token) {
         try {
+            // TODO:
             String tokenType = getClaimFromToken(token, claims -> claims.get("tokenType", String.class));
             return "REFRESH".equals(tokenType);
         } catch (Exception e) {
@@ -270,8 +285,8 @@ public class JWTService {
         switch (user.getStatus().getName()) {
             // if user has profile and status is active return full access and refresh token
             case "ACTIVE":
-                String token = generateToken(user.getId(), user.getRole(), "FULL_ACCESS");
-                String refreshToken = generateRefreshToken(user.getId());
+                String token = generateToken(user.getId(), user.getEmail(), user.getRole(), "FULL_ACCESS");
+                String refreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
                 return TokenResponse.builder()
                         .accessToken(token)
@@ -286,8 +301,8 @@ public class JWTService {
             case "PENDING_MODERATION":
 
                 // if user has profile and status is PENDING_MODERATION return limited access token
-                token = generateToken(user.getId(), user.getRole(), "LIMITED_ACCESS");
-                refreshToken = generateRefreshToken(user.getId());
+                token = generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS");
+                refreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
                 return TokenResponse.builder()
                         .accessToken(token)
@@ -393,5 +408,21 @@ public class JWTService {
             log.error("Failed to extract roles from Keycloak token: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    public String extractUserEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        return resolver.apply(extractAllClaims(token));
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }
