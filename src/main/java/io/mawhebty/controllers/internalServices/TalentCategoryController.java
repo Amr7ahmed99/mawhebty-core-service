@@ -30,7 +30,7 @@ public class TalentCategoryController {
 
     @PostMapping("/categories/form-keys")
     public ResponseEntity<Void> createFormKey(
-            @RequestBody CreateFormKeyRequest request
+            @Valid @RequestBody CreateFormKeyRequest request
     ) {
         talentCategoryService.createFormKey(
                 request.getFieldKeyId(),

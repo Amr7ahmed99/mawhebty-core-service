@@ -1,6 +1,7 @@
 package io.mawhebty.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.mawhebty.enums.ParticipationTypesEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,6 +34,10 @@ public class TalentCategory extends BaseEntity {
     @Column(unique = true, nullable = false)
     @ToString.Include
     private Integer partnerId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "participation_type_id", nullable = false)
+    private ParticipationType participationType;
 
     @OneToMany(mappedBy = "talentCategory", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore

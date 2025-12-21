@@ -1,6 +1,8 @@
 package io.mawhebty.services;
 
+import io.mawhebty.dtos.FindOrCreateUserDto;
 import io.mawhebty.dtos.requests.ConfirmRegistrationRequest;
+import io.mawhebty.dtos.responses.*;
 import io.mawhebty.enums.*;
 import io.mawhebty.exceptions.*;
 import io.mawhebty.models.*;
@@ -9,11 +11,6 @@ import org.springframework.stereotype.Service;
 import io.mawhebty.dtos.requests.DraftRegistrationRequest;
 import io.mawhebty.dtos.requests.GenerateOtpRequest;
 import io.mawhebty.dtos.requests.LoginRequest;
-import io.mawhebty.dtos.responses.DraftResponse;
-import io.mawhebty.dtos.responses.LoginResponse;
-import io.mawhebty.dtos.responses.OTPGenerationResponse;
-import io.mawhebty.dtos.responses.TokenResponse;
-import io.mawhebty.projections.UserProfileProjection;
 import io.mawhebty.services.validations.RegistrationValidationService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -43,28 +40,13 @@ public class RegistrationService {
     private final TalentFormValueService talentFormValueService;
     private final TalentCategoryRepository talentCategoryRepository;
     private final TalentSubCategoryRepository talentSubCategoryRepository;
-
+    private final UserService userService;
 
     @Transactional
+//    @RateLimited(attempts = 5, duration = 15)
     public LoginResponse login(LoginRequest request) {
 
-        boolean isNewUser = false;
-
-        // check if the user is new or already registered
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .isVerified(false)
-                        .email(request.getEmail())
-                        .status(userStatusRepository.findByName(UserStatusEnum.DRAFT.getName())
-                                .orElseThrow(() -> new ResourceNotFoundException("DRAFT status not found")))
-                        .build())
-                );
-
-        // check if it has profile, because we create a profile for the user after draft registration step
-        UserProfileProjection profileProj = userRepository.checkUserHasProfileById(user.getId());
-        if (!profileProj.hasProfile()) {
-            isNewUser = true;
-        }
+        FindOrCreateUserDto result  = userService.findOrCreateByEmail(request.getEmail());
 
         OTPGenerationResponse otpGenRes = otpService.generateAndSendOtp(
                 GenerateOtpRequest.builder()
@@ -73,17 +55,21 @@ public class RegistrationService {
         );
 
         return LoginResponse.builder()
-                .userId(user.getId())
-                .isNewUser(isNewUser)
+                .userId(result.getUser().getId())
+                .isNewUser(result.getIsNew())
                 .otpState(otpGenRes)
                 .build();
     }
 
-    @Transactional
+    @Transactional(rollbackOn = {Exception.class})
     public DraftResponse createDraftUser(DraftRegistrationRequest request) {
+        String fullPhone = (request.getPrefixCode().replace("+","") + request.getPhone()).trim();
+        if (!fullPhone.matches("^[0-9]{8,20}$")) {
+            throw new BadDataException("Invalid full phone number: " + fullPhone));
+        }
+
         // 1. Validate unique phone
-        if (request.getPhone() != null && !request.getPhone().isEmpty()
-                && userRepository.existsByPhone(request.getPrefixCode() + request.getPhone())) {
+        if (userRepository.existsByPhone(fullPhone)) {
             throw new PhoneAlreadyExistsException();
         }
 
@@ -94,12 +80,10 @@ public class RegistrationService {
             throw new UserNotVerified("user not verified with email: " + request.getEmail());
         }
 
-
-
         UserRole role = userRoleRepository.findById(request.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid user role with ID: " + request.getRoleId()));
 
-        user.setPhone(request.getPrefixCode()+request.getPhone());
+        user.setPhone(fullPhone);
         user.setRole(role);
 
         // validate Category
@@ -127,28 +111,28 @@ public class RegistrationService {
 //            user.setEmail(request.getEmail()); // already verified by otp
 //            user.setPassword(passwordEncoder.encode(request.getPassword()));
                 user.setStatus(activeStatus);
-                user = userRepository.save(user);
+                User savedUser = userRepository.save(user);
 
-                userProfileService.createResearcherProfile(user, request, talentCategory, talentSubCategory);
+                userProfileService.createResearcherProfile(savedUser, request, talentCategory, talentSubCategory);
 
                 // Assign full permissions to individual researcher
                 // Generate FULL_ACCESS token
-                String fullAccessToken = jwtService.generateToken(user.getId(), user.getRole(), "FULL_ACCESS");
-                String refreshToken = jwtService.generateRefreshToken(user.getId());
+                String fullAccessToken = jwtService.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole(), "FULL_ACCESS");
+                String refreshToken = jwtService.generateRefreshToken(savedUser.getId(), savedUser.getEmail());
 
                 TokenResponse tokenResponse= TokenResponse.builder()
                         .accessToken(fullAccessToken)
                         .refreshToken(refreshToken)
                         .tokenType("FULL_ACCESS")
                         .expiresIn(jwtService.getRemainingTokenTime(fullAccessToken))
-                        .permissions(jwtService.getFullPermissions(user.getRole()))
-                        .userStatus(user.getStatus().getName())
-                        .userRole(user.getRole().getName())
+                        .permissions(jwtService.getFullPermissions(savedUser.getRole()))
+                        .userStatus(savedUser.getStatus().getName())
+                        .userRole(savedUser.getRole().getName())
                         // .message("Registration pending moderation. You have limited access until approved.")
                         .build();
 
                 // in case user is individual researcher, skip file handling and post creation and return
-                return DraftResponse.successWithoutFileAndWithToken(user.getId(), tokenResponse);
+                return DraftResponse.successWithoutFileAndWithToken(savedUser.getId(), tokenResponse);
             }
         }
 
@@ -161,11 +145,14 @@ public class RegistrationService {
         );
 
         // 4. Update user record
+        UserStatus draftStatus = userStatusRepository.findByName(UserStatusEnum.DRAFT.getName())
+                .orElseThrow(() -> new UserStatusNotFoundException("DRAFT status not found"));
         user.setRole(role);
-        user = userRepository.save(user);
+        user.setStatus(draftStatus);
+        User savedUser = userRepository.save(user);
 
         // 5. Create user profile
-        Object profile = this.createUserProfile(request, request.getRoleId(), user, talentCategory, talentSubCategory);
+        Object profile = this.createUserProfile(request, request.getRoleId(), savedUser, talentCategory, talentSubCategory);
 
         // 6. Add Talent Category Form Data
         boolean isTalentAndHasCategoryFormData = (profile instanceof TalentProfile) && !requestCategoryFormData.isEmpty();
@@ -174,9 +161,9 @@ public class RegistrationService {
         }
 
         // 7. Create post with PENDING_MODERATION status
-        createFirstPost(user, fileUrl);
+        createFirstPost(savedUser, fileUrl);
 
-        return DraftResponse.success(user.getId(), fileUrl);
+        return DraftResponse.success(savedUser.getId(), fileUrl);
     }
 
     private Object createUserProfile(DraftRegistrationRequest request, Integer roleId, User user,
@@ -249,16 +236,17 @@ public class RegistrationService {
                 .status(draftStatus)
                 .build();
 
-            postRepository.save(firstPost);
+            Post savedPost= postRepository.save(firstPost);
 
+            if(savedPost.getId() == null){
+                throw new Exception("post not created for user " + user.getId() +", post: "+ firstPost);
+            }
 
-            // TODO:de a3mlha create lma y3ml confirm registration, we tegy tb3t le moderation service we t8er el status bta3t el post l PENDING_MODERATION
-            // 5. Create media moderation record
-//             createMediaModerationRecord(firstPost);
+            log.info("post created successfully: {}", firstPost);
 
         } catch (Exception e) {
             // Log the error but don't fail the entire registration
-            log.error("Failed to create first post for user {}: {}", user.getId(), e.getMessage());
+            log.error("Failed to create first post for user {}", user.getId(), e);
         }
     }
 
@@ -277,21 +265,21 @@ public class RegistrationService {
     }
 
     @Transactional
-    public TokenResponse confirmRegistration(ConfirmRegistrationRequest request){
+    public ConfirmRegistrationResponse confirmRegistration(ConfirmRegistrationRequest request){
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: "+ request.getEmail()));
 
         // user must be drafted and verified
-        if (!user.getStatus().getName().equals(UserStatusEnum.DRAFT) || !user.getIsVerified()) {
+        if (!user.getStatus().getName().equals(UserStatusEnum.DRAFT.getName()) || !user.getIsVerified()) {
             throw new IllegalStateException("User not ready for confirmation");
         }
-        
+
         UserStatus pendingModerationStatus = userStatusRepository.findByName(UserStatusEnum.PENDING_MODERATION.getName())
             .orElseThrow(() -> new UserStatusNotFoundException("PENDING_MODERATION status not found"));
-        
+
         user.setStatus(pendingModerationStatus);
         userRepository.save(user);
-        
+
         // get registration post to extract media_url and send it to moderationQueue
         Post userRegisterationPost= postRepository.findByOwnerUserId(user.getId())
             .orElseThrow(()-> new ResourceNotFoundException("User registration file not found"));
@@ -320,25 +308,31 @@ public class RegistrationService {
             userRegisterationPost.setStatus(postPendingModerationStatus);
             // create moderation record for this post
             userRegisterationPost.setMediaModeration(this.createMediaModerationRecord());
-            postRepository.save(userRegisterationPost); 
+            postRepository.save(userRegisterationPost);
 
             // create moderation record for this post
 //            this.createMediaModerationRecord(userRegisterationPost);
         }
 
         // 3. Generate LIMITED token
-        String limitedToken = jwtService.generateToken(user.getId(), user.getRole(), "LIMITED_ACCESS");
-        String refreshToken = jwtService.generateRefreshToken(user.getId());
-        
-        return TokenResponse.builder()
-            .accessToken(limitedToken)
-            .refreshToken(refreshToken)
-            .tokenType("LIMITED_ACCESS")
-            .expiresIn(jwtService.getRemainingTokenTime(limitedToken))
-            .permissions(jwtService.getLimitedPermissions(user.getRole()))
-            .userStatus(user.getStatus().getName())
-            .userRole(user.getRole().getName())
-            // .message("Registration pending moderation. You have limited access until approved.")
-            .build();
+        String limitedToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS");
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
+
+
+        TokenResponse tokenResponse= TokenResponse.builder()
+                .accessToken(limitedToken)
+                .refreshToken(refreshToken)
+                .tokenType("LIMITED_ACCESS")
+                .expiresIn(jwtService.getRemainingTokenTime(limitedToken))
+                .permissions(jwtService.getLimitedPermissions(user.getRole()))
+                .userStatus(user.getStatus().getName())
+                .userRole(user.getRole().getName())
+                // .message(".")
+                .build();
+
+        return ConfirmRegistrationResponse.builder()
+                .message("Registration pending moderation. You have limited access until approved")
+                .tokenResponse(tokenResponse)
+                .build();
     }
 }

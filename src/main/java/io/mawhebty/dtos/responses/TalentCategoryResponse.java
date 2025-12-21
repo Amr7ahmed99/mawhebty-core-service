@@ -8,8 +8,9 @@ import java.util.List;
 @Data
 @Builder
 public class TalentCategoryResponse {
-    Integer id; // reference to partnerId
-    String nameEn;
-    String nameAr;
-    List<TalentSubCategoryResponse> subCategories;
+    private Integer id; // reference to partnerId
+    private String nameEn;
+    private String nameAr;
+    private Integer participationTypeId;// project_idea, personal_talent, patent
+    private List<TalentSubCategoryResponse> subCategories;
 }

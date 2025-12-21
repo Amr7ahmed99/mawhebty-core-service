@@ -4,10 +4,13 @@ import io.mawhebty.dtos.requests.InternalServices.CreateTalentCategoryRequest;
 import io.mawhebty.dtos.requests.InternalServices.CreateTalentSubCategoryRequest;
 import io.mawhebty.dtos.responses.TalentCategoryResponse;
 import io.mawhebty.dtos.responses.TalentSubCategoryResponse;
+import io.mawhebty.enums.ParticipationTypesEnum;
 import io.mawhebty.exceptions.BadDataException;
+import io.mawhebty.models.ParticipationType;
 import io.mawhebty.models.TalentCategory;
 import io.mawhebty.models.TalentCategoryFormKeys;
 import io.mawhebty.models.TalentSubCategory;
+import io.mawhebty.repository.ParticipationTypeRepository;
 import io.mawhebty.repository.TalentCategoryFormKeysRepository;
 import io.mawhebty.repository.TalentCategoryRepository;
 import io.mawhebty.repository.TalentSubCategoryRepository;
@@ -24,6 +27,7 @@ public class TalentCategoryService {
     private final TalentCategoryRepository talentCategoryRepository;
     private final TalentSubCategoryRepository talentSubCategoryRepository;
     private final TalentCategoryFormKeysRepository formKeysRepository;
+    private final ParticipationTypeRepository participationTypeRepository;
 
     /**
      * Create a new category.
@@ -34,17 +38,20 @@ public class TalentCategoryService {
         if (talentCategoryRepository.existsByNameArAndNameEn(request.getNameEn(), request.getNameAr())) {
             throw new BadDataException(String.format("Category with name (%s) or (%s) already exists", request.getNameEn(), request.getNameAr()));
         }
-//
-//        TalentCategory parent = null;
-//        if (request.getParentId() != null) {
-//            parent = talentCategoryRepository.findById(request.getParentId())
-//                    .orElseThrow(() -> new BadDataException("Parent category not found with id: " + request.getParentId()));
-//        }
 
-        TalentCategory category = TalentCategory.builder()
+        ParticipationType type= participationTypeRepository.findById(request.getParticipationTypeId())
+                .orElseThrow(()-> new BadDataException("Invalid participation type with id: " + request.getParticipationTypeId()));
+
+        TalentCategory category = talentCategoryRepository.findByPartnerId(request.getPartnerId()).orElse(null);
+        if(category != null){
+            throw new BadDataException("Category with partner id " + request.getPartnerId()+ " is already exist");
+        }
+
+        category = TalentCategory.builder()
                 .partnerId(request.getPartnerId())
                 .nameEn(request.getNameEn())
                 .nameAr(request.getNameAr())
+                .participationType(type)
                 .build();
 
         talentCategoryRepository.save(category);
@@ -131,6 +138,7 @@ public class TalentCategoryService {
                         .id(tc.getPartnerId())
                         .nameAr(tc.getNameAr())
                         .nameEn(tc.getNameEn())
+                        .participationTypeId(tc.getParticipationType().getId())
                         .subCategories(
                                 tc.getTalentSubCategories()
                                         .stream()

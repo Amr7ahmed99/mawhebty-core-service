@@ -133,6 +133,8 @@
 
 package io.mawhebty.security;
 
+import io.mawhebty.handlers.OAuth2FailureHandler;
+import io.mawhebty.handlers.OAuth2SuccessHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -140,6 +142,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -149,6 +152,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -167,6 +171,12 @@ public class SecurityConfig {
     @Autowired
     private KeycloakAuthFilter keycloakAuthFilter;
 
+    @Autowired
+    private OAuth2SuccessHandler oAuth2SuccessHandler;
+
+    @Autowired
+    private OAuth2FailureHandler oAuth2FailureHandler;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -180,7 +190,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -200,6 +210,48 @@ public class SecurityConfig {
                 // CSRF disabled for stateless API
                 .csrf(csrf -> csrf.disable())
 
+                // Authorization rules
+//                .authorizeHttpRequests(auth -> auth
+//                                // Public endpoints - no authentication required
+//                                .requestMatchers(
+//                                        "/api/v1/auth/**",
+//                                        "/api/v1/categories/**",
+//                                        "/api/v1/sub-categories/**",
+//                                        "/api/v1/talent/**",
+//                                        "/health",
+//                                        "/actuator/health",
+//                                        "/api/v1/public/**"
+//                                ).permitAll()
+//
+//                                .requestMatchers("/oauth2/**", "/login/oauth2/**", "/login").permitAll()
+//
+//                                // Internal admin endpoints - handled by Keycloak filter
+//                                .requestMatchers("/api/v1/internal-services/core/**").authenticated()
+//
+//                                // Admin endpoints - can use either Custom JWT or Keycloak
+//                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+//
+//                                // User endpoints - can use either Custom JWT or Keycloak
+////                        .requestMatchers("/api/v1/user/**").hasAnyRole("USER", "ADMIN")
+//                                .requestMatchers("/api/v1/user/**").authenticated()
+//
+//                                // Protected endpoints - can use either authentication
+////                        .requestMatchers(
+////                                "/api/v1/categories/**",
+////                                "/api/v1/sub-categories/**",
+////                                "/api/v1/talent/**"
+////                        ).authenticated()
+//
+//                                // Any other API endpoint requires authentication
+////                        .requestMatchers("/api/**").authenticated()
+//
+//                                // Allow everything else
+//                                .anyRequest().authenticated()
+//                )
+//                .oauth2Login(oauth2 -> oauth2
+//                        .successHandler(oAuth2SuccessHandler)
+//                        .failureHandler(oAuth2FailureHandler)
+//                )
                 // Session management - stateless
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -217,7 +269,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/health",
                                 "/actuator/health",
-                                "/api/v1/public/**"
+                                "/api/v1/public/**",
+                                "/api/v1/categories/**",
+                                "/api/v1/sub-categories/**",
+                                "/api/v1/talent/**",
+                                "/health"
                         ).permitAll()
 
                         // Internal admin endpoints - handled by Keycloak filter
@@ -227,20 +283,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         // User endpoints - can use either Custom JWT or Keycloak
-                        .requestMatchers("/api/v1/user/**").hasAnyRole("USER", "ADMIN")
+//                        .requestMatchers("/api/v1/users/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/v1/users/**").permitAll()
 
                         // Protected endpoints - can use either authentication
-                        .requestMatchers(
-                                "/api/v1/categories/**",
-                                "/api/v1/sub-categories/**",
-                                "/api/v1/talent/**"
-                        ).authenticated()
+//                        .requestMatchers(
+//                                "/api/v1/categories/**",
+//                                "/api/v1/sub-categories/**",
+//                                "/api/v1/talent/**"
+//                        ).authenticated()
 
                         // Any other API endpoint requires authentication
                         .requestMatchers("/api/**").authenticated()
-
-                        // Allow everything else
-                        .anyRequest().permitAll()
                 );
 
         return http.build();

@@ -10,6 +10,6 @@ import io.mawhebty.models.PostType;
 public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findByOwnerUserId(Long ownerUserId);
 
-    Optional<Post> findByOwnerUserIdAndType(Long ownerUserId, PostType type);
+    Optional<Post> findByIdAndOwnerUserIdAndTypeId(Long postId, Long ownerUserId, Integer type);
 
 }
