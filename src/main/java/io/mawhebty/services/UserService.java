@@ -9,6 +9,7 @@ import io.mawhebty.exceptions.UserStatusNotFoundException;
 import io.mawhebty.models.*;
 import io.mawhebty.projections.UserProfileProjection;
 import io.mawhebty.repository.*;
+import io.mawhebty.support.MessageService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import io.mawhebty.exceptions.BadDataException;
@@ -28,12 +29,12 @@ public class UserService {
     private final PostVisibilityRepository visibilityRepository;
     private final MediaModerationRepository mediaModerationRepository;
     private final MediaModerationStatusRepository mediaModerationStatusRepository;
-
+    private final MessageService messageService;
 
     public Boolean validatePhone(String phone){
         phone= phone.trim();
         if(phone.isBlank()){
-            throw new BadDataException("Phone number is empty");
+            throw new BadDataException(messageService.getMessage("phone.is.empty"));
         }
         if(phone.contains("+")){
             phone= phone.replace("+", "");
@@ -43,7 +44,7 @@ public class UserService {
 
     public Boolean validateEmail(String email){
         if(email.isEmpty()){
-            throw new BadDataException("email is empty");
+            throw new BadDataException(messageService.getMessage("email.is.empty"));
         }
 
         return this.userRepository.findByEmail(email).isPresent();

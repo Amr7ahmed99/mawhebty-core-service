@@ -65,7 +65,7 @@ public class RegistrationService {
     public DraftResponse createDraftUser(DraftRegistrationRequest request) {
         String fullPhone = (request.getPrefixCode().replace("+","") + request.getPhone()).trim();
         if (!fullPhone.matches("^[0-9]{8,20}$")) {
-            throw new BadDataException("Invalid full phone number: " + fullPhone));
+            throw new BadDataException("Invalid full phone number: " + fullPhone);
         }
 
         // 1. Validate unique phone
