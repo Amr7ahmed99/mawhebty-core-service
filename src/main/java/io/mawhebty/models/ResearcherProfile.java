@@ -1,24 +1,15 @@
 package io.mawhebty.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import io.mawhebty.exceptions.BadDataException;
+import jakarta.persistence.*;
 import lombok.*;
 
-@Entity
-@Table(name = "researcher_profile")
+@MappedSuperclass
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 public class ResearcherProfile extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,10 +18,10 @@ public class ResearcherProfile extends BaseEntity{
     @OneToOne
     @JoinColumn(name = "user_id", unique = true)
     private User user;
-    
-    @ManyToOne
-    @JoinColumn(name = "user_type_id")
-    private UserType userType;
+
+//    @ManyToOne
+//    @JoinColumn(name = "user_type_id")
+//    private UserType userType;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -52,9 +43,4 @@ public class ResearcherProfile extends BaseEntity{
 
     private String shortBio;
     private String profilePicture;
-    private String contactPerson;// profile name (fullName)
-
-    private String companyName;
-    private String commercialRegNo;
-    private String contactPhone;
 }

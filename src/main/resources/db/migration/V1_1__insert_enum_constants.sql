@@ -84,10 +84,10 @@ ON CONFLICT (id) DO NOTHING;
 -- =========================================
 CREATE TABLE IF NOT EXISTS user_types (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+    type VARCHAR(100) UNIQUE NOT NULL
 );
 
-INSERT INTO user_types (id, name)
+INSERT INTO user_types (id, type)
 VALUES
  (1, 'INDIVIDUAL'),
  (2, 'COMPANY')

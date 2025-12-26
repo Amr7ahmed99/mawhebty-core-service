@@ -55,5 +55,9 @@ public class TalentCategory extends BaseEntity {
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<ResearcherProfile> researcherProfiles = new ArrayList<>();
+    private List<CompanyResearcherProfile> companyResearcherProfiles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<IndividualResearcherProfile> individualResearcherProfiles = new ArrayList<>();
 }

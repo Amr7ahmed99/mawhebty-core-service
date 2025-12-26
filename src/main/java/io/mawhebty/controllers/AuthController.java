@@ -32,11 +32,9 @@ public class AuthController {
     private final JWTService jwtService;
     private final UserService userService;
 
-
-
     // Step 1
     @PostMapping(value= "/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, @Nullable @RequestParam boolean error){
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, @RequestParam(required = false) boolean error){
         if (error){
             throw new IllegalStateException("Google authentication failed");
         }
@@ -89,7 +87,7 @@ public class AuthController {
 
             if (jwtService.validateToken(refreshToken)) {
                 String newAccessToken = jwtService.generateToken(user.getId(), user.getEmail(),
-                        user.getRole(), user.getStatus().getName().equals(UserStatusEnum.ACTIVE.getName())? "FULL_ACCESS": "LIMITED_ACCESS");
+                        user.getRole(), user.getStatus().getName().equals(UserStatusEnum.ACTIVE.getName())? "FULL_ACCESS": "LIMITED_ACCESS", user.getStatus());
 
                 return ResponseEntity.ok().body(Map.of("accessToken", newAccessToken));
             }

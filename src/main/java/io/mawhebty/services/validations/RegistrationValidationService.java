@@ -63,12 +63,13 @@ public class RegistrationValidationService {
         }
 
         if (request.getFile() == null) {
-            throw new BadDataException("You must upload video/image file");
+            throw new BadDataException("You must upload video/image/doc file");
         }
 
-        boolean isMediaFile = s3Service.isImageFile(request.getFile()) || s3Service.isVideoFile(request.getFile());
-        if (!isMediaFile) {
-            throw new BadDataException("The uploaded file must be video/image");
+        boolean isMediaOrDocFile = s3Service.isImageFile(request.getFile()) ||
+                s3Service.isVideoFile(request.getFile()) || s3Service.isDocumentFile(request.getFile());
+        if (!isMediaOrDocFile) {
+            throw new BadDataException("The uploaded file must be video/image/doc");
         }
 
         if (request.getParticipationTypeId() == null) {
@@ -76,26 +77,9 @@ public class RegistrationValidationService {
         }
     }
 
-    public void validateResearcherRegistration(DraftRegistrationRequest request) {
-
-        if(request.getUserTypeId() == null){
-            throw new BadDataException("User type must not be null");
-        }
-
-        boolean validUserType= false;
-        for (UserTypeEnum type : UserTypeEnum.values()) {
-            if (request.getUserTypeId().equals(type.getId())) {
-                validUserType = true;
-                break;
-            }
-        }
-
-        if(!validUserType){
-            throw new ResourceNotFoundException("Invalid user type with ID: "+ request.getUserTypeId());
-        }
+    public void validateResearcherRegistration(DraftRegistrationRequest request, boolean isIndividualResearcher) {
 
         boolean fileIsNotNull= request.getFile() != null;
-        boolean isIndividualResearcher= request.getUserTypeId().equals(UserTypeEnum.INDIVIDUAL.getId());
         if(isIndividualResearcher && fileIsNotNull){
             throw new IndividualResearcherFileException();
         }
@@ -103,6 +87,16 @@ public class RegistrationValidationService {
         // in case user is individual researcher, skip file handling and post creation and return
         if(isIndividualResearcher){
             return;
+        }
+
+        if(request.getCompanyName()==null || request.getCompanyName().isBlank()){
+            throw new BadDataException("company name is required");
+        }
+        if(request.getContactPerson() == null || request.getContactPerson().isBlank()){
+            throw new BadDataException("contact person is required");
+        }
+        if(request.getCommercialRegNo() == null || request.getCommercialRegNo().isBlank()){
+            throw new BadDataException("commercial registration number is required");
         }
 
         if(!fileIsNotNull){
@@ -113,6 +107,5 @@ public class RegistrationValidationService {
         if (isMediaFile){
             throw new BadDataException("The uploaded file must be (doc/pdf)");
         }
-
     }
 }

@@ -44,16 +44,13 @@ public class JWTService {
 
     private final UserRepository userRepository;
 
-    public String generateToken(Long userId, String email, UserRole role, String tokenType) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException(userId));
-
+    public String generateToken(Long userId, String email, UserRole role, String tokenType, UserStatus status) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("email", email);
         claims.put("role", role.getName());
         claims.put("tokenType", tokenType);
-        claims.put("userStatus", user.getStatus().getName());
+        claims.put("userStatus", status.getName());
         claims.put("permissions", "LIMITED_ACCESS".equals(tokenType)? getLimitedPermissions(role): getFullPermissions(role));
 
         return buildToken(claims, userId.toString(), email, accessTokenExpiration);
@@ -236,11 +233,11 @@ public class JWTService {
         permissions.add(PermissionEnum.SAVE_POSTS.getId());
 
         //TODO: read is_limited permissions dependent on role from DB
-        if (UserRoleEnum.TALENT.getName().equals(role.getName())) {
+        if (UserRoleEnum.TALENT.equals(role.getName())) {
             permissions.add(PermissionEnum.MANAGE_TALENT_PROFILE.getId());
             permissions.add(PermissionEnum.RECEIVE_CONTRACTS.getId());
             permissions.add(PermissionEnum.UPLOAD_CONTENT.getId());
-        } else if (UserRoleEnum.RESEARCHER.getName().equals(role.getName())) {
+        } else if (UserRoleEnum.RESEARCHER.equals(role.getName())) {
             permissions.add(PermissionEnum.MANAGE_RESEARCHER_PROFILE.getId());
             permissions.add(PermissionEnum.SEND_CONTRACTS.getId());
             permissions.add(PermissionEnum.BOOST_LISTINGS.getId());
@@ -282,26 +279,24 @@ public class JWTService {
 
     public TokenResponse determineSuitableTokenResponse(User user){
 
+        String token ="";
+        String refreshToken ="";
         switch (user.getStatus().getName()) {
             // if user has profile and status is active return full access and refresh token
             case "ACTIVE":
-                String token = generateToken(user.getId(), user.getEmail(), user.getRole(), "FULL_ACCESS");
-                String refreshToken = generateRefreshToken(user.getId(), user.getEmail());
+                token = generateToken(user.getId(), user.getEmail(), user.getRole(), "FULL_ACCESS", user.getStatus());
+                refreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
                 return TokenResponse.builder()
                         .accessToken(token)
                         .refreshToken(refreshToken)
                         .tokenType("FULL_ACCESS")
                         .expiresIn(getRemainingTokenTime(token))
-                        .permissions(getFullPermissions(user.getRole()))
-                        .userStatus(user.getStatus().getName())
-                        .userRole(user.getRole().getName())
                         .build();
 
             case "PENDING_MODERATION":
-
                 // if user has profile and status is PENDING_MODERATION return limited access token
-                token = generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS");
+                token = generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS", user.getStatus());
                 refreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
                 return TokenResponse.builder()
@@ -309,9 +304,6 @@ public class JWTService {
                         .refreshToken(refreshToken)
                         .tokenType("LIMITED_ACCESS")
                         .expiresIn(getRemainingTokenTime(token))
-                        .permissions(getLimitedPermissions(user.getRole()))
-                        .userStatus(user.getStatus().getName())
-                        .userRole(user.getRole().getName())
                         .build();
             default:
                 return null;

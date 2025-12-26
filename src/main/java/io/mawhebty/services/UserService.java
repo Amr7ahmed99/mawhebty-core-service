@@ -31,15 +31,15 @@ public class UserService {
     private final MediaModerationStatusRepository mediaModerationStatusRepository;
     private final MessageService messageService;
 
-    public Boolean validatePhone(String phone){
-        phone= phone.trim();
-        if(phone.isBlank()){
+    public Boolean validatePhone(String fullPhone){
+        fullPhone= fullPhone.trim();
+        if(fullPhone.isBlank()){
             throw new BadDataException(messageService.getMessage("phone.is.empty"));
         }
-        if(phone.contains("+")){
-            phone= phone.replace("+", "");
-        }
-        return this.userRepository.findByPhone(phone).isPresent();
+//        if(!fullPhone.contains("+")){
+//            fullPhone= "+" + fullPhone;
+//        }
+        return this.userRepository.findByFullPhone(fullPhone).isPresent();
     }
 
     public Boolean validateEmail(String email){
