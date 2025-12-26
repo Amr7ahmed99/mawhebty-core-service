@@ -41,6 +41,7 @@ public class RegistrationService {
     private final TalentCategoryRepository talentCategoryRepository;
     private final TalentSubCategoryRepository talentSubCategoryRepository;
     private final UserService userService;
+    private final UserTypeRepository userTypeRepository;
 
     @Transactional
 //    @RateLimited(attempts = 5, duration = 15)
@@ -69,40 +70,60 @@ public class RegistrationService {
         }
 
         // 1. Validate unique phone
-        if (userRepository.existsByPhone(fullPhone)) {
+        if (userRepository.findByFullPhone(fullPhone).isPresent()) {
             throw new PhoneAlreadyExistsException();
         }
 
         // check if not verified
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailFetchStatus(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: " + request.getEmail()));
         if (!user.getIsVerified()) {
             throw new UserNotVerified("user not verified with email: " + request.getEmail());
         }
 
+        if(!UserStatusEnum.DRAFT.getName().equals(user.getStatus().getName())){
+            throw new IllegalStateException("user already exist with status " + user.getStatus().getName());
+        }
+
         UserRole role = userRoleRepository.findById(request.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid user role with ID: " + request.getRoleId()));
 
-        user.setPhone(fullPhone);
+        user.setPhoneNumber(request.getPhone());
+        user.setCountryCode(request.getPrefixCode());
         user.setRole(role);
 
         // validate Category
         TalentCategory talentCategory = talentCategoryRepository.findByPartnerId(request.getCategoryId())
                 .orElseThrow(() -> new BadDataException("Talent category not found with id: " + request.getCategoryId()));
 
-        TalentSubCategory talentSubCategory= null;
-        if(request.getSubCategoryId() != null){
-            talentSubCategory= talentSubCategoryRepository.findByPartnerId(request.getSubCategoryId())
+        TalentSubCategory talentSubCategory = null;
+        if (request.getSubCategoryId() != null) {
+            talentSubCategory = talentSubCategoryRepository.findByPartnerId(request.getSubCategoryId())
                     .orElseThrow(() -> new BadDataException("Talent subCategory not found with id: " + request.getSubCategoryId()));
         }
 
         // 2. custom validations based on user role
         List<TalentCategoryFormKeys> requestCategoryFormData = new ArrayList<>();
-        if (request.getRoleId().equals(UserRoleEnum.TALENT.getId())) {
+        boolean isIndividualResearcher = false;
+        if (role.getName().equals(UserRoleEnum.TALENT)) {
             validationService.validateTalentRegistration(request, requestCategoryFormData, talentCategory);
-        } else {
-            validationService.validateResearcherRegistration(request);
-            boolean isIndividualResearcher= request.getUserTypeId().equals(UserTypeEnum.INDIVIDUAL.getId());
+        }
+        else {
+
+            if (request.getUserTypeId() == null) {
+                throw new BadDataException("User type must not be null");
+            }
+
+            UserType userType = userTypeRepository.findById(request.getUserTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Invalid user type with ID: " + request.getUserTypeId()));
+
+            user.setUserType(userType);
+
+            isIndividualResearcher = userType.getType().equals(UserTypeEnum.INDIVIDUAL);
+
+
+            validationService.validateResearcherRegistration(request, isIndividualResearcher);
+
             if (isIndividualResearcher) {
                 // Create User as individual researcher with profile
                 UserStatus activeStatus = userStatusRepository.findByName(UserStatusEnum.ACTIVE.getName())
@@ -113,46 +134,43 @@ public class RegistrationService {
                 user.setStatus(activeStatus);
                 User savedUser = userRepository.save(user);
 
-                userProfileService.createResearcherProfile(savedUser, request, talentCategory, talentSubCategory);
+                IndividualResearcherProfile profile= (IndividualResearcherProfile) userProfileService.createResearcherProfile(
+                        savedUser,request, talentCategory, talentSubCategory, true);
 
                 // Assign full permissions to individual researcher
                 // Generate FULL_ACCESS token
-                String fullAccessToken = jwtService.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole(), "FULL_ACCESS");
+                String fullAccessToken = jwtService.generateToken(savedUser.getId(), savedUser.getEmail(),
+                        savedUser.getRole(), "FULL_ACCESS", user.getStatus());
                 String refreshToken = jwtService.generateRefreshToken(savedUser.getId(), savedUser.getEmail());
 
-                TokenResponse tokenResponse= TokenResponse.builder()
+                TokenResponse tokenResponse = TokenResponse.builder()
                         .accessToken(fullAccessToken)
                         .refreshToken(refreshToken)
                         .tokenType("FULL_ACCESS")
                         .expiresIn(jwtService.getRemainingTokenTime(fullAccessToken))
-                        .permissions(jwtService.getFullPermissions(savedUser.getRole()))
-                        .userStatus(savedUser.getStatus().getName())
-                        .userRole(savedUser.getRole().getName())
-                        // .message("Registration pending moderation. You have limited access until approved.")
                         .build();
 
+                UserRegistrationResponseDto userRegistrationResponseDto= this.prepareUserRegistrationResponse(user, profile);
+                userRegistrationResponseDto.setPermissions(jwtService.getFullPermissions(role));
+
                 // in case user is individual researcher, skip file handling and post creation and return
-                return DraftResponse.successWithoutFileAndWithToken(savedUser.getId(), tokenResponse);
+                return DraftResponse.successWithoutFileAndWithToken(userRegistrationResponseDto, tokenResponse);
             }
         }
-
-        boolean isCompony = request.getUserTypeId() != null && request.getUserTypeId().equals(UserTypeEnum.COMPANY.getId());
 
         // 3. Upload file to S3 in special bucket name depending on the file and user role
         String fileUrl = s3Service.uploadFile(
                 request.getFile(),
-                isCompony ? s3Service.getAdminFolderInBucket() : s3Service.getAwsRekognitionFolderInBucket()
+                role.getName().equals(UserRoleEnum.TALENT)? s3Service.getAwsRekognitionFolderInBucket(): s3Service.getAdminFolderInBucket()
         );
 
         // 4. Update user record
-        UserStatus draftStatus = userStatusRepository.findByName(UserStatusEnum.DRAFT.getName())
-                .orElseThrow(() -> new UserStatusNotFoundException("DRAFT status not found"));
-        user.setRole(role);
-        user.setStatus(draftStatus);
+//        UserStatus draftStatus = userStatusRepository.findByName(UserStatusEnum.DRAFT.getName())
+//                .orElseThrow(() -> new UserStatusNotFoundException("DRAFT status not found"));
         User savedUser = userRepository.save(user);
 
         // 5. Create user profile
-        Object profile = this.createUserProfile(request, request.getRoleId(), savedUser, talentCategory, talentSubCategory);
+        Object profile = this.createUserProfile(request, role, savedUser, talentCategory, talentSubCategory);
 
         // 6. Add Talent Category Form Data
         boolean isTalentAndHasCategoryFormData = (profile instanceof TalentProfile) && !requestCategoryFormData.isEmpty();
@@ -163,17 +181,18 @@ public class RegistrationService {
         // 7. Create post with PENDING_MODERATION status
         createFirstPost(savedUser, fileUrl);
 
-        return DraftResponse.success(savedUser.getId(), fileUrl);
+        return DraftResponse.success(this.prepareUserRegistrationResponse(savedUser, profile), fileUrl);
     }
 
-    private Object createUserProfile(DraftRegistrationRequest request, Integer roleId, User user,
+    private Object createUserProfile(DraftRegistrationRequest request, UserRole role, User user,
                                      TalentCategory talentCategory, TalentSubCategory talentSubCategory) {
         //Create role-specific profile
-        if (roleId.equals(UserRoleEnum.TALENT.getId())) {
+        if (role.getName().equals(UserRoleEnum.TALENT)) {
             return userProfileService.createTalentProfile(user, request, talentCategory, talentSubCategory);
         }
 
-        return userProfileService.createResearcherProfile(user, request, talentCategory, talentSubCategory);
+        // create company researcher profile
+        return userProfileService.createResearcherProfile(user, request, talentCategory, talentSubCategory, false);
     }
 
     private void createFirstPost(User user, String mediaUrl) {
@@ -247,6 +266,7 @@ public class RegistrationService {
         } catch (Exception e) {
             // Log the error but don't fail the entire registration
             log.error("Failed to create first post for user {}", user.getId(), e);
+            throw new PostNotCreatedException(e.getMessage());
         }
     }
 
@@ -254,23 +274,18 @@ public class RegistrationService {
         MediaModerationStatus status= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.PENDING.getName())
             .orElseThrow(() -> new ResourceNotFoundException("PENDING status not found"));
 
-        MediaModeration moderation = mediaModerationRepository.save(MediaModeration.builder()
-//            .post(post)
-            .status(status)
-            // .checkedAt(LocalDateTime.now())
-            // .moderatorId() //Admin, AWS
-            .build());
-        
-        return moderation;
+        return mediaModerationRepository.save(MediaModeration.builder()
+                .status(status)
+                .build());
     }
 
     @Transactional
     public ConfirmRegistrationResponse confirmRegistration(ConfirmRegistrationRequest request){
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailFetchStatusAndUserType(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: "+ request.getEmail()));
 
         // user must be drafted and verified
-        if (!user.getStatus().getName().equals(UserStatusEnum.DRAFT.getName()) || !user.getIsVerified()) {
+        if (!UserStatusEnum.DRAFT.getName().equals(user.getStatus().getName()) || !user.getIsVerified()) {
             throw new IllegalStateException("User not ready for confirmation");
         }
 
@@ -284,7 +299,7 @@ public class RegistrationService {
         Post userRegisterationPost= postRepository.findByOwnerUserId(user.getId())
             .orElseThrow(()-> new ResourceNotFoundException("User registration file not found"));
 
-        boolean isTalent= user.getRole().getId().equals(UserRoleEnum.TALENT.getId());
+        boolean isTalent= UserRoleEnum.TALENT.equals(user.getRole().getName());
 
         boolean messageWasSent= false;
 
@@ -296,7 +311,7 @@ public class RegistrationService {
         }
 
         // in case the role is researcher and userType is company, send it to SQS to be reviewed by admin_dashboard
-        if (!isTalent && user.getResearcherProfile().getUserType().getId().equals(UserTypeEnum.COMPANY.getId())) {
+        if (!isTalent && UserTypeEnum.COMPANY.equals(user.getUserType().getType())) {
             messageWasSent= this.moderationQueueService.sendFileForModeration(user.getId(), user.getRole().getId(),"REGISTRATION_DOCUMENT",
                     ModerationTypeEnum.USER_REGISTRATION.name(), userRegisterationPost.getId(), userRegisterationPost.getMediaUrl());
         }
@@ -315,24 +330,56 @@ public class RegistrationService {
         }
 
         // 3. Generate LIMITED token
-        String limitedToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS");
+        String limitedToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole(), "LIMITED_ACCESS", user.getStatus());
         String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
 
+        // 4. get profile
+        Object profile= userProfileService.getUserProfile(user);
 
         TokenResponse tokenResponse= TokenResponse.builder()
                 .accessToken(limitedToken)
                 .refreshToken(refreshToken)
                 .tokenType("LIMITED_ACCESS")
                 .expiresIn(jwtService.getRemainingTokenTime(limitedToken))
-                .permissions(jwtService.getLimitedPermissions(user.getRole()))
-                .userStatus(user.getStatus().getName())
-                .userRole(user.getRole().getName())
-                // .message(".")
                 .build();
 
+        UserRegistrationResponseDto userRegistrationResponseDto= this.prepareUserRegistrationResponse(user, profile);
+        userRegistrationResponseDto.setPermissions(jwtService.getLimitedPermissions(user.getRole()));
         return ConfirmRegistrationResponse.builder()
                 .message("Registration pending moderation. You have limited access until approved")
+                .user(userRegistrationResponseDto)
                 .tokenResponse(tokenResponse)
                 .build();
+    }
+
+    private UserRegistrationResponseDto prepareUserRegistrationResponse(User user, Object profile){
+        UserRegistrationResponseDto userRegistrationResponseDto = UserRegistrationResponseDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .phone(user.getPhoneNumber())
+                .countryCode(user.getCountryCode())
+                .userStatus(user.getStatus() != null? user.getStatus().getId(): null)
+                .userRole(user.getRole() != null? user.getRole().getId(): null)
+                .userType(user.getUserType() != null? user.getUserType().getId(): null)
+                .build();
+
+        if (profile instanceof TalentProfile) {
+            userRegistrationResponseDto.setFirstName(((TalentProfile) profile).getFirstName());
+            userRegistrationResponseDto.setLastName(((TalentProfile) profile).getLastName());
+            userRegistrationResponseDto.setImageUrl(((TalentProfile) profile).getProfilePicture());
+        }else{
+            if(profile instanceof IndividualResearcherProfile){
+                userRegistrationResponseDto.setFirstName(((IndividualResearcherProfile) profile).getFirstName());
+                userRegistrationResponseDto.setFirstName(((IndividualResearcherProfile) profile).getLastName());
+            }else{
+                userRegistrationResponseDto.setCompanyName(((CompanyResearcherProfile) profile).getCompanyName());
+                userRegistrationResponseDto.setContactPerson(((CompanyResearcherProfile) profile).getContactPerson());
+                userRegistrationResponseDto.setCommercialRegNo(((CompanyResearcherProfile) profile).getCommercialRegNo());
+            }
+            userRegistrationResponseDto.setImageUrl(((ResearcherProfile) profile).getProfilePicture());
+        }
+
+        return userRegistrationResponseDto;
+
     }
 }

@@ -1,11 +1,11 @@
 package io.mawhebty.services;
 
+import io.mawhebty.enums.UserRoleEnum;
 import io.mawhebty.enums.UserTypeEnum;
 import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.*;
 import io.mawhebty.repository.*;
 import org.springframework.stereotype.Service;
-
 import io.mawhebty.dtos.requests.DraftRegistrationRequest;
 import io.mawhebty.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,8 @@ import lombok.RequiredArgsConstructor;
 public class UserProfileService {
 
     private final TalentProfileRepository talentProfileRepository;
-    private final ResearcherProfileRepository researcherProfileRepository;
+    private final IndividualResearcherProfileRepository individualResearcherProfileRepository;
+    private final CompanyResearcherProfileRepository companyResearcherProfileRepository;
     private final ParticipationTypeRepository participationTypeRepository;
     private final GenderRepository genderRepository;
     private final UserTypeRepository userTypeRepository;
@@ -25,7 +26,8 @@ public class UserProfileService {
         ParticipationType type = participationTypeRepository.findById(request.getParticipationTypeId())
                 .orElseThrow(()-> new BadDataException("Invalid participation type with id: " + request.getParticipationTypeId()));
         profile.setUser(user);
-        profile.setFullName(request.getFirstName() + " " + request.getLastName());
+        profile.setFirstName(request.getFirstName());
+        profile.setLastName(request.getLastName());
         profile.setCountry(request.getCountry());
         profile.setCity(request.getCity());
         profile.setAge(request.getAge());
@@ -42,33 +44,64 @@ public class UserProfileService {
 
         return talentProfileRepository.save(profile);
     }
-    
-    public ResearcherProfile createResearcherProfile(User user, DraftRegistrationRequest request,
-                                                     TalentCategory talentCategory, TalentSubCategory talentSubCategory) {
-        ResearcherProfile profile = new ResearcherProfile();
-        profile.setUser(user);
-        
-        // Fetch user type entity
-        UserType userType = userTypeRepository.findById(request.getUserTypeId())
-            .orElseThrow(() -> new ResourceNotFoundException("User type not found"));
 
-        profile.setUserType(userType);
-        profile.setShortBio(request.getShortBio());
-        profile.setCity(request.getCity());
-        profile.setCountry(request.getCountry());
-        profile.setCategory(talentCategory);
-        profile.setSubCategory(talentSubCategory);
+    public ResearcherProfile createResearcherProfile(
+            User user,
+            DraftRegistrationRequest request,
+            TalentCategory talentCategory,
+            TalentSubCategory talentSubCategory,
+            boolean isIndividual
+    ) {
 
-        if (userType.getId().equals(UserTypeEnum.COMPANY.getId())) {
+        if (isIndividual) {
+            IndividualResearcherProfile profile = new IndividualResearcherProfile();
+            profile.setUser(user);
+            profile.setShortBio(request.getShortBio());
+            profile.setCity(request.getCity());
+            profile.setCountry(request.getCountry());
+            profile.setCategory(talentCategory);
+            profile.setSubCategory(talentSubCategory);
+
+            profile.setFirstName(request.getFirstName());
+            profile.setLastName(request.getLastName());
+
+            return individualResearcherProfileRepository.save(profile);
+
+        } else {
+            CompanyResearcherProfile profile = new CompanyResearcherProfile();
+            profile.setUser(user);
+            profile.setShortBio(request.getShortBio());
+            profile.setCity(request.getCity());
+            profile.setCountry(request.getCountry());
+            profile.setCategory(talentCategory);
+            profile.setSubCategory(talentSubCategory);
+
             profile.setCompanyName(request.getCompanyName());
             profile.setCommercialRegNo(request.getCommercialRegNo());
             profile.setContactPerson(request.getContactPerson());
-            profile.setContactPhone(request.getPrefixCode()+request.getPhone());
-        } else {
-            profile.setContactPerson(request.getFirstName() + " " + request.getLastName());
+            profile.setContactPhone(request.getPrefixCode() + request.getPhone());
+
+            return companyResearcherProfileRepository.save(profile);
         }
-        
-        // profile.setProfilePicture(fileUrl);
-        return researcherProfileRepository.save(profile);
+    }
+
+
+    public ResearcherProfile getResearcherProfileByType(Long userId, UserType userType){
+        if (userType == null || userType.getType() == null) {
+            throw new BadDataException("user type is required");
+        }
+        return switch (userType.getType()) {
+            case INDIVIDUAL -> individualResearcherProfileRepository.findByUserId(userId).orElse(null);
+            case COMPANY -> companyResearcherProfileRepository.findByUserId(userId).orElse(null);
+        };
+    }
+
+    public Object getUserProfile(User user){
+        if (user.getRole().getName().equals(UserRoleEnum.TALENT)) {
+            return talentProfileRepository.findByUserId(user.getId())
+                    .orElseThrow(()-> new BadDataException("the user does not have talent profile"));
+        }
+
+        return this.getResearcherProfileByType(user.getId(), user.getUserType());
     }
 }

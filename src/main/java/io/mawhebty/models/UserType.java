@@ -1,11 +1,7 @@
 package io.mawhebty.models;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import io.mawhebty.enums.UserTypeEnum;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -19,7 +15,8 @@ public class UserType{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    
+
+    @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
-    private String name; // INDIVIDUAL, COMPANY
+    private UserTypeEnum type= UserTypeEnum.INDIVIDUAL;
 }

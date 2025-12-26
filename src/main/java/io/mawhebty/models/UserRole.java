@@ -1,5 +1,6 @@
 package io.mawhebty.models;
 
+import io.mawhebty.enums.UserRoleEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,12 +20,9 @@ public class UserRole extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-//    @Enumerated(EnumType.STRING)
-//    @Column(unique = true, nullable = false)
-//    private UserRoleEnum name;
-
+    @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
-    private String name;// TALENT, RESEARCHER
+    private UserRoleEnum name;
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

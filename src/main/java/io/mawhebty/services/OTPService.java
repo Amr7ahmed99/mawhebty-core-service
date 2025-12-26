@@ -5,14 +5,11 @@ import io.mawhebty.dtos.requests.OTPVerificationRequest;
 import io.mawhebty.dtos.responses.OTPGenerationResponse;
 import io.mawhebty.dtos.responses.OTPVerificationResponse;
 import io.mawhebty.dtos.responses.TokenResponse;
-import io.mawhebty.exceptions.OTPAlreadyUsedException;
-import io.mawhebty.exceptions.OTPExpiredException;
-import io.mawhebty.exceptions.OTPGenerationFailedException;
-import io.mawhebty.exceptions.OTPNotFoundException;
-import io.mawhebty.exceptions.UserNotFoundException;
+import io.mawhebty.dtos.responses.UserRegistrationResponseDto;
+import io.mawhebty.enums.UserRoleEnum;
+import io.mawhebty.exceptions.*;
 import io.mawhebty.models.*;
-import io.mawhebty.repository.UserOtpRepository;
-import io.mawhebty.repository.UserRepository;
+import io.mawhebty.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -32,9 +29,13 @@ public class OTPService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JWTService jwtService;
+    private final TalentProfileRepository talentProfileRepository;
+    private final CompanyResearcherProfileRepository companyResearcherProfileRepository;
+    private final IndividualResearcherProfileRepository individualResearcherProfileRepository;
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final int OTP_EXPIRATION_MINUTES = 10;
     private static final int MAX_ACTIVE_OTP = 3;
+    private final UserProfileService userProfileService;
     // private final UserStatusRepository userStatusRepository;
 //    private final OtpTypeRepository otpTypeRepository;
 
@@ -125,7 +126,7 @@ public class OTPService {
             return OTPVerificationResponse.builder()
                 .success(false)
                 .message("Invalid OTP code")
-                .userId(request.getUserId())
+                .user(null)
                 .tokenResponse(null)
                 .build();
         }
@@ -134,7 +135,7 @@ public class OTPService {
         userOtpRepository.save(otpRecord);
 
         // 6. Update user to be verified
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findByIdFetchRoleAndStatusAndUserType(request.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(request.getUserId()));
 
         if(!user.getIsVerified()) {
@@ -155,11 +156,47 @@ public class OTPService {
         // if user has profile and status is PENDING_MODERATION return limited access token
         TokenResponse tokenResponse= jwtService.determineSuitableTokenResponse(user);
 
-        // if user status is DRAFT return otp verified successfully without tokens
+        // prepare user data response
+        UserRegistrationResponseDto userRegistrationResponseDto = UserRegistrationResponseDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .phone(user.getPhoneNumber())
+                .countryCode(user.getCountryCode())
+                .userStatus(user.getStatus() != null? user.getStatus().getId(): null)
+                .userRole(user.getRole() != null? user.getRole().getId(): null)
+                .userType(user.getUserType() != null? user.getUserType().getId(): null)
+                .build();
+        // if token is null that's mean this is a new user (not registered)
+        if(tokenResponse != null){
+            if (user.getRole().getName().equals(UserRoleEnum.TALENT)) {
+                TalentProfile profile= talentProfileRepository.findByUserId(user.getId())
+                        .orElseThrow(()-> new BadDataException("the user does not have talent profile"));
+                userRegistrationResponseDto.setFirstName(profile.getFirstName());
+                userRegistrationResponseDto.setLastName(profile.getLastName());
+                userRegistrationResponseDto.setImageUrl(profile.getProfilePicture());
+            }else{
+                ResearcherProfile profile= userProfileService.getResearcherProfileByType(user.getId(), user.getUserType());
+                if(profile == null){
+                    throw new BadDataException("the user does not have researcher profile");
+                }
+                if(profile instanceof IndividualResearcherProfile){
+                    userRegistrationResponseDto.setFirstName(((IndividualResearcherProfile) profile).getFirstName());
+                    userRegistrationResponseDto.setFirstName(((IndividualResearcherProfile) profile).getLastName());
+                }else{
+                    userRegistrationResponseDto.setCompanyName(((CompanyResearcherProfile) profile).getCompanyName());
+                    userRegistrationResponseDto.setCompanyName(((CompanyResearcherProfile) profile).getContactPerson());
+                    userRegistrationResponseDto.setCommercialRegNo(((CompanyResearcherProfile) profile).getCommercialRegNo());
+                }
+                userRegistrationResponseDto.setImageUrl(profile.getProfilePicture());
+            }
+            userRegistrationResponseDto.setPermissions(jwtService.getFullPermissions(user.getRole()));
+        }
+
+        // if user status is DRAFT return otp verified successfully without tokens (tokenResponse is null)
         return OTPVerificationResponse.builder()
                 .success(true)
                 .message("OTP verified successfully")
-                .userId(user.getId())
+                .user(userRegistrationResponseDto)
                 .tokenResponse(tokenResponse)
                 .build();
     }
@@ -167,5 +204,4 @@ public class OTPService {
     public String generateVerificationCode() {
         return String.valueOf(secureRandom.nextInt(900_000) + 100_000);
     }
-
 }

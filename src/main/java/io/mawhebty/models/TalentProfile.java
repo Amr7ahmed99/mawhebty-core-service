@@ -27,7 +27,10 @@ public class TalentProfile extends BaseEntity {
     private User user;
 
     @ToString.Include
-    private String fullName;
+    private String firstName;
+
+    @ToString.Include
+    private String lastName;
 
     @Column(name = "country", nullable = false)
     @ToString.Include
