@@ -8,7 +8,6 @@ import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.User;
 import io.mawhebty.services.JWTService;
 import io.mawhebty.services.UserService;
-import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,7 +24,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-public class AuthController {
+public class AuthController{
 
     private final RegistrationService registrationService;
     private final OTPService otpService;
@@ -36,7 +35,8 @@ public class AuthController {
 
     // Step 1
     @PostMapping(value= "/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, @Nullable @RequestParam boolean error){
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                               @RequestParam(required = false, defaultValue = "false") boolean error){
         if (error){
             throw new IllegalStateException("Google authentication failed");
         }

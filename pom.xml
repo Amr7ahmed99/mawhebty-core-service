@@ -31,6 +31,7 @@
     <aws.sdk.version>2.20.0</aws.sdk.version>
     <flyway.version>11.7.2</flyway.version>
     <keycloak.version>26.0.1</keycloak.version>
+    <api.package>io.mawhebty.api</api.package>
 </properties>
 
 <dependencyManagement>
@@ -226,6 +227,57 @@
                     </exclude>
                 </excludes>
             </configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.openapitools</groupId>
+            <artifactId>openapi-generator-maven-plugin</artifactId>
+            <version>7.5.0</version>
+            <executions>
+                <execution>
+                    <id>generate-mawhebty-portal-v1-api-interfaces</id>
+                    <goals>
+                        <goal>generate</goal>
+                    </goals>
+                    <configuration>
+                        <inputSpec>${project.basedir}/src/main/resources/static/mawhebty-portal.api.yaml</inputSpec>
+                        <generatorName>spring</generatorName>
+                        <modelNameSuffix>Resource</modelNameSuffix>
+                        <skipValidateSpec>false</skipValidateSpec>
+                        <configOptions>
+                            <packageName>${api.package}.v1.mawhebtyPortal</packageName>
+                            <apiPackage>${api.package}.v1.mawhebtyPortal</apiPackage>
+                            <modelPackage>${api.package}.v1.resources.mawhebtyPortal</modelPackage>
+                            <dateLibrary>java8</dateLibrary>
+                            <delegatePattern>true</delegatePattern>
+                            <useBeanValidation>true</useBeanValidation>
+                            <interfaceOnly>true</interfaceOnly>
+                            <useTags>true</useTags>
+                        </configOptions>
+                        <typeMappings>
+                            <typeMapping>OffsetDateTime=java.time.LocalDateTime</typeMapping>
+                        </typeMappings>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+                <execution>
+                    <id>add-source</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                        <goal>add-source</goal>
+                    </goals>
+                    <configuration>
+                        <sources>
+                            <source>${project.build.directory}/generated-sources/openapi/src/main/java</source>
+                        </sources>
+                    </configuration>
+                </execution>
+            </executions>
         </plugin>
     </plugins>
 </build>

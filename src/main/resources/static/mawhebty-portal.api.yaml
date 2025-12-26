@@ -1,0 +1,116 @@
+openapi: 3.0.3
+info:
+  title: Mawhebty portal api
+  description: API for mawhebty portal end-points
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/mawhebty-portal/v1
+    description: Local development server
+  - url: https://talent-scout-mu.vercel.app/
+    description: Production server.
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - MawhebtyPortalAuthLogin
+      summary: login
+      description: login
+      operationId: login
+      parameters:
+        - in: query
+          name: error
+          required: false
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      security: []
+      responses:
+        '200':
+          description: Successful response with userId, userState and otpState
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - error
+        - code
+        - timestamp
+
+    OTPGenerationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        nextStep:
+          type: string
+        verificationUrl:
+          type: string
+        otpExpiresAt:
+          type: string
+          format: date-time
+
+    LoginResponse:
+      type: object
+      properties:
+        otpState:
+          $ref: '#/components/schemas/OTPGenerationResponse'
+        userId:
+          type: integer
+        isNewUser:
+          type: boolean
