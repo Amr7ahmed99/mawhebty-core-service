@@ -5,18 +5,16 @@ import java.util.*;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.*;
 import io.mawhebty.dtos.responses.TokenResponse;
 import io.mawhebty.enums.PermissionEnum;
+import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.UserStatus;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import io.mawhebty.enums.UserRoleEnum;
@@ -36,13 +34,53 @@ public class JWTService {
     @Value("${security.jwt.secret}")
     private String secret;
 
+    private SecretKey signingKey;
+
     @Value("${jwt.expiration}")
     private Long accessTokenExpiration;
 
     @Value("${jwt.refreshExpiration}")
     private Long refreshTokenExpiration;
 
-    private final UserRepository userRepository;
+    @PostConstruct
+    public void init() {
+        try {
+            log.info("Initializing JWT Service...");
+            log.info("Secret key length: {}", secret.length());
+            log.info("Secret key preview: {}...",
+                    secret.substring(0, Math.min(10, secret.length())));
+
+            if (secret.length() < 32) {
+                log.warn("JWT secret is too short ({} chars). Minimum recommended is 32.",
+                        secret.length());
+            }
+
+            // إنشاء الـ signing key
+            signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            log.info("JWT Service initialized successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to initialize JWT Service: {}", e.getMessage(), e);
+            throw new RuntimeException("JWT Service initialization failed", e);
+        }
+    }
+
+    private String buildToken(Map<String, Object> claims, String subject, String email, Long expirationInSeconds) {
+        long nowMillis = System.currentTimeMillis();
+        long nowSeconds = nowMillis / 1000L;
+        long expSeconds = nowSeconds + expirationInSeconds;
+
+        log.debug("Building token - Now: {}ms ({}s), Expiration: +{}s = {}s",
+                nowMillis, nowSeconds, expirationInSeconds, expSeconds);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject("Mawhebty")
+                .setIssuedAt(new Date(nowMillis))
+                .setExpiration(new Date(expSeconds * 1000L))  // Convert seconds to millis
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
 
     public String generateToken(Long userId, String email, UserRole role, String tokenType, UserStatus status) {
         Map<String, Object> claims = new HashMap<>();
@@ -63,18 +101,6 @@ public class JWTService {
         claims.put("email", email);
 
         return buildToken(claims, userId.toString(), email, refreshTokenExpiration);
-    }
-
-    private String buildToken(Map<String, Object> claims, String subject, String email,  Long expiration) {
-        long now = System.currentTimeMillis();
-
-        return Jwts.builder()
-            .setClaims(claims)
-            .setSubject(subject)
-            .setIssuedAt(new Date(now))
-            .setExpiration(new Date(now + expiration))
-            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-            .compact();
     }
 
     public ResponseCookie buildCookieForRefreshToken(String refreshToken) {
@@ -111,7 +137,6 @@ public class JWTService {
 
     public boolean isRefreshToken(String token) {
         try {
-            // TODO:
             String tokenType = getClaimFromToken(token, claims -> claims.get("tokenType", String.class));
             return "REFRESH".equals(tokenType);
         } catch (Exception e) {
@@ -138,6 +163,10 @@ public class JWTService {
         return getClaimFromToken(token, claims -> claims.get("role", String.class));
     }
 
+    public String getUserEmailFromToken(String token) {
+        return getClaimFromToken(token, claims -> claims.get("email", String.class));
+    }
+
     public List<String> getPermissionsFromToken(String token) {
         try {
             List<?> rawList = getClaimFromToken(token, claims -> claims.get("permissions", List.class));
@@ -161,8 +190,36 @@ public class JWTService {
     // ========== CORE JWT METHODS ==========
 
     public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
+        try {
+            String cleanToken = cleanToken(token);
+            final Claims claims = getAllClaimsFromToken(cleanToken);
+            return claimsResolver.apply(claims);
+        } catch (Exception e) {
+            log.error("Failed to get claim from token: {}", e.getMessage());
+            throw new JwtException(e.getMessage(), e);
+        }
+    }
+
+    public String cleanToken(String token) {
+        if (token == null) {
+            return null;
+        }
+
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
+        token = token.trim()
+                .replaceAll("\\s+", "")    // spaces
+                .replaceAll("\\r|\\n", ""); // line breaks
+
+        String[] parts = token.split("\\.");
+        if (parts.length != 3) {
+            log.warn("Invalid JWT format after cleaning. Parts: {}", parts.length);
+            throw new MalformedJwtException("Invalid JWT format");
+        }
+
+        return token;
     }
 
     private Claims getAllClaimsFromToken(String token) {
@@ -262,8 +319,14 @@ public class JWTService {
 
     // ========== UTILITY METHODS ==========
 
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    public SecretKey getSigningKey() {
+        // Return the cached key, don't create a new one!
+        if (signingKey == null) {
+            // Fallback if init() wasn't called (shouldn't happen)
+            log.warn("Signing key not initialized, creating fallback key");
+            signingKey = Keys.hmacShaKeyFor(secret.trim().getBytes(StandardCharsets.UTF_8));
+        }
+        return signingKey;
     }
 
     public Long getRemainingTokenTime(String token) {
@@ -416,5 +479,23 @@ public class JWTService {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    public String getRefreshToken(String cookieToken, String headerToken) {
+        String token = null;
+
+        // Get token from either source
+        if (cookieToken != null && !cookieToken.isBlank()) {
+            token = cookieToken;
+        } else if (headerToken != null && !headerToken.isBlank()) {
+            token = headerToken;
+        }
+
+        if (token == null || token.isBlank()) {
+            throw new BadDataException("Refresh token is missing");
+        }
+
+        // Clean the token before returning
+        return cleanToken(token);
     }
 }

@@ -9,11 +9,11 @@ import io.mawhebty.models.User;
 import io.mawhebty.services.JWTService;
 import io.mawhebty.services.UserService;
 import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.http.*;
 import io.mawhebty.services.OTPService;
 import io.mawhebty.services.RegistrationService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequiredArgsConstructor
@@ -74,29 +75,89 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // TODO: MAKE THIS LOGIC IN doD
-    @PostMapping("/refresh-token")
-    public ResponseEntity<?> refreshToken(String refreshToken) {
-        if (refreshToken == null) {
-            throw new BadDataException("Refresh token missing");
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(
+            @CookieValue(name = "refresh_token", required = false) String refreshTokenCookie,
+            @RequestHeader(name = "X-Refresh-Token", required = false) String refreshTokenHeader,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        String refreshToken = jwtService.getRefreshToken(refreshTokenCookie, refreshTokenHeader);
+//        boolean isFromCookie = refreshTokenCookie != null && refreshToken.equals(refreshTokenCookie);
+
+        // Validate refresh token
+        if (!jwtService.isRefreshToken(refreshToken)) {
+            throw new BadDataException("Invalid refresh token");
         }
 
         try {
-            String email = jwtService.extractUserEmail(refreshToken);
-            User user = userService.findByEmail(email);
+            // Extract user info
+            String email = jwtService.getUserEmailFromToken(refreshToken);
+            User user = userService.findByEmailFetchStatus(email);
+
+            // Validate user
+            Long tokenUserId = jwtService.getUserIdFromToken(refreshToken);
+            if (!Objects.equals(user.getId(), tokenUserId)) {
+                throw new BadDataException("Invalid refresh token claims");
+            }
 
             if (jwtService.validateToken(refreshToken)) {
-                String newAccessToken = jwtService.generateToken(user.getId(), user.getEmail(),
-                        user.getRole(), user.getStatus().getName().equals(UserStatusEnum.ACTIVE.getName())? "FULL_ACCESS": "LIMITED_ACCESS", user.getStatus());
+                // Generate new access token
+                String newAccessToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole(),
+                        user.getStatus().getName().equals(UserStatusEnum.ACTIVE.getName())? "FULL_ACCESS": "LIMITED_ACCESS", user.getStatus());
 
-                return ResponseEntity.ok().body(Map.of("accessToken", newAccessToken));
+                // Rotate refresh token
+                String newRefreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
+
+                // Set new refresh token in cookie
+                ResponseCookie newRefreshTokenCookie = ResponseCookie.from("refresh_token", newRefreshToken)
+                        .httpOnly(true)
+                        .secure(true)
+                        .sameSite("Strict")
+                        .maxAge(7 * 24 * 60 * 60)
+                        .path("/api/auth/refresh")
+                        .build();
+
+                response.addHeader(HttpHeaders.SET_COOKIE, newRefreshTokenCookie.toString());
+
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + newAccessToken)
+                        .body(Map.of("access_token", newAccessToken));
             }
         } catch (ExpiredJwtException e) {
-//            log.error("Refresh token expired", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token expired, please login again");
+            // Clear expired refresh token cookie
+            ResponseCookie clearCookie = ResponseCookie.from("refresh_token", "")
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Strict")
+                    .maxAge(0)
+                    .path("/api/auth/refresh")
+                    .build();
+
+            response.addHeader(HttpHeaders.SET_COOKIE, clearCookie.toString());
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Refresh token expired, please login again");
         }
 
-//        log.error("Invalid refresh token");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("Invalid refresh token");
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        // Clear refresh token cookie
+        ResponseCookie clearCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .maxAge(0)
+                .path("/api/auth/refresh")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, clearCookie.toString());
+
+        return ResponseEntity.ok().body("Logged out successfully");
     }
 }

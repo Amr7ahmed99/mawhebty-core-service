@@ -43,4 +43,16 @@ public class ResearcherProfile extends BaseEntity{
 
     private String shortBio;
     private String profilePicture;
+
+    // Calculated fields
+    @Transient
+    private Integer followersCount;
+
+    @Transient
+    private Integer followingCount;
+
+    public void updateFollowCounts(Integer followers, Integer following) {
+        this.followersCount = followers;
+        this.followingCount = following;
+    }
 }

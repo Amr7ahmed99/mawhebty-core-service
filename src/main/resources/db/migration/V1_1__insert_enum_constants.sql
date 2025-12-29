@@ -53,14 +53,16 @@ ON CONFLICT (id) DO NOTHING;
 -- =========================================
 CREATE TABLE IF NOT EXISTS participation_types (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+    name_en VARCHAR(100) UNIQUE NOT NULL,
+    name_ar VARCHAR(100) UNIQUE NOT NULL
+
 );
 
-INSERT INTO participation_types (id, name)
+INSERT INTO participation_types (id, name_en, name_ar)
 VALUES
- (1, 'PROJECT_IDEA'),
- (2, 'PERSONAL_TALENT'),
- (3, 'PATENT')
+ (1, 'PROJECT_IDEA','فكرة مشروع'),
+ (2, 'PERSONAL_TALENT', 'موهبة شخصية'),
+ (3, 'PATENT', 'براءة اختراع')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================

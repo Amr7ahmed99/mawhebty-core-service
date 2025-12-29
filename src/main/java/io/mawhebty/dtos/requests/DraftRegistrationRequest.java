@@ -74,4 +74,5 @@ public class DraftRegistrationRequest {
     private String companyName;
     private String commercialRegNo;
     private String contactPerson;
+    private String contactPhone;
 }

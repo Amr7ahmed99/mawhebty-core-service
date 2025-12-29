@@ -20,7 +20,10 @@ public class ParticipationType {
     private Integer id;
 
     @Column(unique = true, nullable = false, length = 100)
-    private String name;  // PROJECT_IDEA / PERSONAL_TALENT / PATENT
+    private String nameEn;  // PROJECT_IDEA / PERSONAL_TALENT / PATENT
+
+    @Column(unique = true, nullable = false, length = 100)
+    private String nameAr;
 
     @OneToMany(mappedBy = "participationType")
     @JsonIgnore
