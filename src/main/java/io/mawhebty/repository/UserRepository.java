@@ -16,10 +16,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByFullPhone(@Param("fullPhone") String fullPhone);
 
 
-    @Query("SELECT u FROM User u JOIN FETCH u.status WHERE u.email = :email")
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.status WHERE u.email = :email")
     Optional<User> findByEmailFetchStatus(String email);
 
-    @Query("SELECT u FROM User u JOIN FETCH u.status JOIN FETCH u.userType WHERE u.email = :email")
+    @Query("SELECT u FROM User u JOIN FETCH u.status LEFT JOIN FETCH u.role WHERE u.email = :email")
+    Optional<User> findByEmailFetchStatusAndRole(String email);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.status LEFT JOIN FETCH u.userType WHERE u.email = :email")
     Optional<User> findByEmailFetchStatusAndUserType(String email);
 
 

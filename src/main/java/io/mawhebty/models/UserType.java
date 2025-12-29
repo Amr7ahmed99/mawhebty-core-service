@@ -18,5 +18,6 @@ public class UserType{
 
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
+    @Builder.Default
     private UserTypeEnum type= UserTypeEnum.INDIVIDUAL;
 }

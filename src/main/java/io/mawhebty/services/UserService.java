@@ -55,6 +55,16 @@ public class UserService {
                 .orElseThrow(()-> new UserNotFoundException("User not found by email: "+email));
     }
 
+    public User findByEmailFetchStatus(String email){
+        return this.userRepository.findByEmailFetchStatusAndRole(email)
+                .orElseThrow(()-> new UserNotFoundException("User not found by email: "+email));
+    }
+
+    public User findByEmailFetchStatusAndRole(String email){
+        return this.userRepository.findByEmailFetchStatusAndRole(email)
+                .orElseThrow(()-> new UserNotFoundException("User not found by email: "+email));
+    }
+
     //TODO: Move activateUserAccount to userService.java
     // After approval on first uploaded file (el function de h3mlha call ba3d ma el php moderation service
     // tb3tly 3ala http api we tb2a approved moderation)

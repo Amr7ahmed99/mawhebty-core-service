@@ -5,11 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-
 import io.mawhebty.exceptions.BadDataException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.io.IOException;
 import java.util.UUID;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class S3Service {
 
-    private final AmazonS3 awsS3Client;
+    private final S3Client s3Client;
     private final String bucketName;
     @Getter
     private final String adminFolderInBucket;
@@ -27,12 +27,6 @@ public class S3Service {
     private final String awsRekognitionFolderInBucket;
     @Getter
     private final String awsSpecialCasesFolderInBucket;
-
-    // private final S3Client s3Client;
-
-
-    // private String s3BaseUrl;
-
 
     /**
      * Upload file to S3 and return the file URL
@@ -47,36 +41,30 @@ public class S3Service {
             // Generate unique file name
             String originalFileName = file.getOriginalFilename();
             String fileExtension = getFileExtension(originalFileName);
-            String fileName = folder+ "/" + generateFileName(fileExtension);
-            
+            String fileName = folder + "/" + generateFileName(fileExtension);
+
             // Determine content type
             String contentType = file.getContentType();
             if (contentType == null) {
                 contentType = determineContentType(fileExtension);
             }
 
-            // upload on S3
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize());
-            metadata.setContentType(file.getContentType());
+            // Upload to S3 using AWS SDK v2
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(contentType)
+                    .contentLength(file.getSize())
+                    .build();
 
-            awsS3Client.putObject(bucketName, fileName, file.getInputStream(), metadata);
+            s3Client.putObject(putObjectRequest,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-            // Prepare S3 request
-            // PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-            //         .bucket(bucketName)
-            //         .key(fileName)
-            //         .contentType(contentType)
-            //         .contentLength(file.getSize())
-            //         .build();
-
-            // Upload file to S3
-            // s3Client.putObject(putObjectRequest, file.getInputStream());
-
-            // Generate and return file URL
-            String fileUrl = awsS3Client.getUrl(bucketName, fileName).toString();
+            // Generate file URL
+            String fileUrl = generateFileUrl(fileName);
             log.info("File uploaded successfully: {} -> {}", originalFileName, fileUrl);
             return fileUrl;
+
         } catch (IOException e) {
             log.error("Error reading file: {}", e.getMessage());
             throw new RuntimeException("Failed to read file", e);
@@ -87,68 +75,67 @@ public class S3Service {
     }
 
     /**
-     * Upload file with custom folder structure
-     */
-    // public String uploadFile(MultipartFile file, String folder) {
-    //     try {
-    //         if (file.isEmpty()) {
-    //             throw new IllegalArgumentException("File is empty");
-    //         }
-
-    //         String originalFileName = file.getOriginalFilename();
-    //         String fileExtension = getFileExtension(originalFileName);
-    //         String fileName = folder + "/" + generateFileName(fileExtension);
-            
-    //         String contentType = file.getContentType();
-    //         if (contentType == null) {
-    //             contentType = determineContentType(fileExtension);
-    //         }
-
-    //         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-    //                 .bucket(bucketName)
-    //                 .key(fileName)
-    //                 .contentType(contentType)
-    //                 .contentLength(file.getSize())
-    //                 .build();
-
-    //         s3Client.putObject(putObjectRequest, 
-    //                 RequestBody.fromBytes(file.getBytes()));
-
-    //         String fileUrl = String.format("%s/%s", s3BaseUrl, fileName);
-    //         log.info("File uploaded to folder {}: {} -> {}", folder, originalFileName, fileUrl);
-            
-    //         return fileUrl;
-
-    //     } catch (IOException e) {
-    //         log.error("Error reading file: {}", e.getMessage());
-    //         throw new RuntimeException("Failed to read file", e);
-    //     } catch (S3Exception e) {
-    //         log.error("S3 upload error: {}", e.getMessage());
-    //         throw new RuntimeException("Failed to upload file to S3", e);
-    //     }
-    // }
-
-    /**
      * Delete file from S3
      */
     public boolean deleteFile(String fileUrl) {
         try {
             // Extract file key from URL
-            // String fileKey = extractFileKeyFromUrl(fileUrl);
-            
-            // DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-            //         .bucket(bucketName)
-            //         .key(fileKey)
-            //         .build();
+            String fileKey = extractFileKeyFromUrl(fileUrl);
 
-            // s3Client.deleteObject(deleteObjectRequest);
-            // log.info("File deleted successfully: {}", fileKey);
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("File deleted successfully: {}", fileKey);
             return true;
 
         } catch (S3Exception e) {
             log.error("S3 delete error: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Generate S3 file URL
+     */
+    private String generateFileUrl(String fileKey) {
+        return String.format("https://%s.s3.%s.amazonaws.com/%s",
+                bucketName,
+                getRegionFromClient(),
+                fileKey);
+    }
+
+    /**
+     * Extract region from S3 client
+     */
+    private String getRegionFromClient() {
+        // You can store region in a field or extract from client
+        // For simplicity, we'll return the region string
+        // You might need to modify this based on your setup
+        return "us-east-1"; // Replace with your actual region or get from client
+    }
+
+    /**
+     * Extract file key from URL
+     */
+    private String extractFileKeyFromUrl(String fileUrl) {
+        // Handle different URL formats
+        String[] patterns = {
+                "https://" + bucketName + ".s3.",
+                "http://" + bucketName + ".s3.",
+                "s3://" + bucketName + "/"
+        };
+
+        for (String pattern : patterns) {
+            if (fileUrl.contains(pattern)) {
+                return fileUrl.substring(fileUrl.indexOf(pattern) + pattern.length());
+            }
+        }
+
+        // If no pattern matches, assume it's already a key
+        return fileUrl;
     }
 
     /**
@@ -176,13 +163,12 @@ public class S3Service {
         return extCheck || typeCheck;
     }
 
-
     /**
      * Check if file is a document
      */
     public boolean isDocumentFile(MultipartFile file) {
         String contentType = file.getContentType();
-        return contentType != null && 
+        return contentType != null &&
                (contentType.equals("application/pdf") ||
                 contentType.equals("application/msword") ||
                 contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
@@ -215,17 +201,4 @@ public class S3Service {
             default -> "application/octet-stream";
         };
     }
-
-    // private String extractFileKeyFromUrl(String fileUrl) {
-    //     // Remove base URL to get the file key
-    //     if (fileUrl.startsWith(s3BaseUrl)) {
-    //         return fileUrl.substring(s3BaseUrl.length() + 1);
-    //     }
-    //     // If it's a full S3 URL, extract the key
-    //     if (fileUrl.contains(bucketName)) {
-    //         return fileUrl.substring(fileUrl.indexOf(bucketName) + bucketName.length() + 1);
-    //     }
-    //     // Assume it's already a key
-    //     return fileUrl;
-    // }
 }

@@ -69,4 +69,17 @@ public class TalentProfile extends BaseEntity {
     @JsonIgnore
     @Builder.Default
     private List<TalentCategoryFormValue> formValues = new ArrayList<>();
+
+    // Calculated fields (not stored in DB)
+    @Transient
+    private Integer followersCount;
+
+    @Transient
+    private Integer followingCount;
+
+    // Business methods
+    public void updateFollowCounts(Integer followers, Integer following) {
+        this.followersCount = followers;
+        this.followingCount = following;
+    }
 }

@@ -75,11 +75,11 @@ public class UserProfileService {
             profile.setCountry(request.getCountry());
             profile.setCategory(talentCategory);
             profile.setSubCategory(talentSubCategory);
-
             profile.setCompanyName(request.getCompanyName());
             profile.setCommercialRegNo(request.getCommercialRegNo());
             profile.setContactPerson(request.getContactPerson());
-            profile.setContactPhone(request.getPrefixCode() + request.getPhone());
+            profile.setContactPhone(request.getContactPhone() != null? request.getContactPhone():
+                    request.getPrefixCode().replace("+", "") + request.getPhone());
 
             return companyResearcherProfileRepository.save(profile);
         }

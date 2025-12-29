@@ -1,86 +1,3 @@
-// package io.mawhebty.security;
-
-// import java.io.IOException;
-
-// import org.springframework.http.HttpStatus;
-// import org.springframework.stereotype.Component;
-// import org.springframework.web.filter.OncePerRequestFilter;
-
-// import io.jsonwebtoken.ExpiredJwtException;
-// import io.mawhebty.enums.UserStatusEnum;
-// import io.mawhebty.services.JWTService;
-// import jakarta.servlet.FilterChain;
-// import jakarta.servlet.ServletException;
-// import jakarta.servlet.http.HttpServletRequest;
-// import jakarta.servlet.http.HttpServletResponse;
-// import lombok.AllArgsConstructor;
-
-// @Component
-// @AllArgsConstructor
-// public class JwtLimitedAccessFilter extends OncePerRequestFilter {
-    
-//     private JWTService jwtService;
-//     @Override
-//     protected void doFilterInternal(HttpServletRequest request, 
-//                                   HttpServletResponse response, 
-//                                   FilterChain filterChain) throws ServletException, IOException {
-        
-//         // String token = getTokenFromRequest(request);
-//         final String requestTokenHeader = request.getHeader("Authorization");
-//         String email;
-//         String jwtToken = null;
-//         if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
-//             jwtToken = requestTokenHeader.substring(7);
-//             String extractedEmail = null;
-//             try {
-//                 extractedEmail = jwtUtil.extractUserEmail(jwtToken);
-//             } catch (IllegalArgumentException e) {
-//                 logger.error("Unable to get JWT Token");
-//             } catch (ExpiredJwtException e) {
-//                 logger.warn("JWT Token expired for path {}", path);
-
-//                 // For non-refresh requests, stop the filter chain return 401
-//                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-//                 response.setContentType("application/json");
-//                 response.getWriter().write("{\"error\": \"Token has expired\"}");
-//                 return; 
-//             }
-//             email= extractedEmail;
-//         }else{
-//             email= null;
-//         }
-        
-//         if (requestTokenHeader != null && jwtService.isLimitedToken(requestTokenHeader)) {
-//             UserStatusEnum userStatus = jwtService.getUserStatusFromToken(requestTokenHeader);
-            
-//             if (userStatus == UserStatusEnum.PENDING_MODERATION) {
-//                 // Allow only specific GET endpoints
-//                 if (isAllowedEndpoint(request) && request.getMethod().equals("GET")) {
-//                     filterChain.doFilter(request, response);
-//                     return;
-//                 } else {
-//                     response.sendError(HttpStatus.FORBIDDEN.value(), 
-//                         "Account under moderation review. Please wait for approval.");
-//                     return;
-//                 }
-//             }
-//         }
-        
-//         filterChain.doFilter(request, response);
-//     }
-    
-//     private boolean isAllowedEndpoint(HttpServletRequest request) {
-//         String path = request.getRequestURI();
-//         return path.startsWith("/api/v1/feeds") || 
-//                path.startsWith("/api/v1/posts") || 
-//                path.startsWith("/api/v1/search") ||
-//                path.startsWith("/api/v1/talents") ||
-//                path.startsWith("/api/v1/researchers") ||
-//                path.equals("/api/v1/profile") ||
-//                path.startsWith("/api/v1/categories");
-//     }
-// }
-
 package io.mawhebty.security;
 
 import java.io.IOException;
@@ -114,6 +31,7 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
         "/api/v1/auth/login", 
         "/api/v1/auth/verify-otp",
         "/api/v1/auth/refresh-token",
+        "/api/v1/users/",
         "/api/v1/public/",
         "/oauth2/authorization",
         "/login/oauth2/code",
@@ -205,13 +123,13 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
     }
     
     private boolean isAllowedEndpoint(String path) {
-        return path.startsWith("/api/v1/feeds") || 
-               path.startsWith("/api/v1/posts") || 
-               path.startsWith("/api/v1/search") ||
-               path.startsWith("/api/v1/talents") ||
-               path.startsWith("/api/v1/researchers") ||
-               path.equals("/api/v1/profile") ||
-               path.startsWith("/api/v1/categories");
+        return path.startsWith("/api/v1/mawhebty-platform/feeds") ||
+               path.startsWith("/api/v1/mawhebty-platform/posts") ||
+               path.startsWith("/api/v1/mawhebty-platform/search") ||
+               path.startsWith("/api/v1/mawhebty-platform/talents") ||
+               path.startsWith("/api/v1/mawhebty-platform/researchers") ||
+               path.startsWith("/api/v1/mawhebty-platform/profile") ||
+               path.startsWith("/api/v1/mawhebty-platform/categories");
     }
     
     private void sendErrorResponse(HttpServletResponse response, int status, String message) 
