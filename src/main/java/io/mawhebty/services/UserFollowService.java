@@ -7,10 +7,12 @@ import io.mawhebty.models.User;
 import io.mawhebty.models.UserFollow;
 import io.mawhebty.repositories.UserFollowRepository;
 import io.mawhebty.repository.UserRepository;
+import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -22,31 +24,41 @@ public class UserFollowService {
 
     private final UserFollowRepository userFollowRepository;
     private final UserRepository userRepository;
+    private final MessageService messageService;
 
     @Transactional
     public void followUser(Long followerId, Long followingId) {
         if (followerId.equals(followingId)) {
-            throw new BadDataException("Cannot follow yourself");
+            throw new BadDataException(messageService.getMessage("user.follow.self.error"));
         }
 
         User follower = userRepository.findById(followerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Follower not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("user.not.found", new Object[]{"follower"})
+                ));
 
         User following = userRepository.findById(followingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Following user not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("user.not.found", new Object[]{"following"})
+                ));
 
         // Check if already following
         userFollowRepository.findByFollowerIdAndFollowingId(followerId, followingId)
                 .ifPresent(existingFollow -> {
                     if (existingFollow.getStatus() == FollowStatus.ACTIVE) {
-                        throw new BadDataException("Already following this user");
+                        throw new BadDataException(
+                                messageService.getMessage("user.already.following")
+                        );
                     }
                     // If previously unfollowed, reactivate
                     existingFollow.setStatus(FollowStatus.ACTIVE);
                     existingFollow.setFollowedAt(LocalDateTime.now());
                     existingFollow.setUnfollowedAt(null);
                     userFollowRepository.save(existingFollow);
-                    throw new BadDataException("Follow relationship reactivated");
+
+                    throw new BadDataException(
+                            messageService.getMessage("user.follow.reactivated")
+                    );
                 });
 
         // Create new follow relationship
@@ -63,7 +75,9 @@ public class UserFollowService {
     public void unfollowUser(Long followerId, Long followingId) {
         UserFollow userFollow = userFollowRepository
                 .findByFollowerIdAndFollowingId(followerId, followingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Follow relationship not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("follow.relationship.not.found")
+                ));
 
         userFollow.setStatus(FollowStatus.UNFOLLOWED);
         userFollow.setUnfollowedAt(LocalDateTime.now());
@@ -73,14 +87,20 @@ public class UserFollowService {
     @Transactional
     public void blockUser(Long blockerId, Long blockedId) {
         if (blockerId.equals(blockedId)) {
-            throw new BadDataException("Cannot block yourself");
+            throw new BadDataException(messageService.getMessage("user.block.self.error"));
         }
 
         UserFollow userFollow = userFollowRepository
                 .findByFollowerIdAndFollowingId(blockerId, blockedId)
                 .orElse(UserFollow.builder()
-                        .follower(userRepository.findById(blockerId).orElseThrow())
-                        .following(userRepository.findById(blockedId).orElseThrow())
+                        .follower(userRepository.findById(blockerId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                        messageService.getMessage("user.not.found", new Object[]{"blocker"})
+                                )))
+                        .following(userRepository.findById(blockedId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                        messageService.getMessage("user.not.found", new Object[]{"blocked"})
+                                )))
                         .build());
 
         userFollow.setStatus(FollowStatus.BLOCKED);
@@ -93,8 +113,8 @@ public class UserFollowService {
         Long followingCount = userFollowRepository.countFollowingByUserId(userId);
 
         return Map.of(
-                "followers", followersCount,
-                "following", followingCount
+                "followers", followersCount != null ? followersCount : 0L,
+                "following", followingCount != null ? followingCount : 0L
         );
     }
 

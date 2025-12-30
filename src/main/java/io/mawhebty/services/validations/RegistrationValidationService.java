@@ -8,6 +8,7 @@ import io.mawhebty.enums.UserTypeEnum;
 import io.mawhebty.exceptions.*;
 import io.mawhebty.models.*;
 import io.mawhebty.repository.*;
+import io.mawhebty.support.MessageService;
 import org.springframework.stereotype.Service;
 
 import io.mawhebty.dtos.requests.DraftRegistrationRequest;
@@ -20,9 +21,10 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class RegistrationValidationService {
-    
+
     private final S3Service s3Service;
     private final TalentCategoryFormKeysRepository talentCategoryFormKeysRepository;
+    private final MessageService messageService; // Added
 
     public void validateTalentRegistration(DraftRegistrationRequest request, List<TalentCategoryFormKeys> reqFields, TalentCategory talentCategory) {
 
@@ -31,7 +33,10 @@ public class RegistrationValidationService {
 
         if(!requeriedFields.isEmpty() &&
                 (request.getTalentCategoryForm() == null || request.getTalentCategoryForm().isEmpty() || request.getTalentCategoryForm().isBlank())){
-            throw new BadDataException("Category form data is missing: " + requeriedFields);
+            throw new BadDataException(
+                    messageService.getMessage("category.form.data.missing",
+                            new Object[]{requeriedFields})
+            );
         }
 
         // extract keys and values from talentCategoryForm
@@ -43,7 +48,9 @@ public class RegistrationValidationService {
                     new TypeReference<Map<Integer, Object>>() {}
             );
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(
+                    messageService.getMessage("category.form.parse.error")
+            );
         }
 
         request.setTalentCategoryFormMap(talentCategoryFormMap);
@@ -57,23 +64,32 @@ public class RegistrationValidationService {
                     continue;
                 }
                 if(fk.getIsRequired()){
-                    throw new BadDataException("Category field is required: "+ fk.getNameEn());
+                    throw new BadDataException(
+                            messageService.getMessage("category.field.required",
+                                    new Object[]{fk.getNameEn()})
+                    );
                 }
             }
         }
 
         if (request.getFile() == null) {
-            throw new BadDataException("You must upload video/image/doc file");
+            throw new BadDataException(
+                    messageService.getMessage("file.upload.required")
+            );
         }
 
         boolean isMediaOrDocFile = s3Service.isImageFile(request.getFile()) ||
                 s3Service.isVideoFile(request.getFile()) || s3Service.isDocumentFile(request.getFile());
         if (!isMediaOrDocFile) {
-            throw new BadDataException("The uploaded file must be video/image/doc");
+            throw new BadDataException(
+                    messageService.getMessage("invalid.file.format")
+            );
         }
 
         if (request.getParticipationTypeId() == null) {
-            throw new BadDataException("Talent must have participation type");
+            throw new BadDataException(
+                    messageService.getMessage("participation.type.required")
+            );
         }
     }
 
@@ -81,7 +97,9 @@ public class RegistrationValidationService {
 
         boolean fileIsNotNull= request.getFile() != null;
         if(isIndividualResearcher && fileIsNotNull){
-            throw new IndividualResearcherFileException();
+            throw new IndividualResearcherFileException(
+                    messageService.getMessage("individual.researcher.file.not.allowed")
+            );
         }
 
         // in case user is individual researcher, skip file handling and post creation and return
@@ -90,22 +108,33 @@ public class RegistrationValidationService {
         }
 
         if(request.getCompanyName()==null || request.getCompanyName().isBlank()){
-            throw new BadDataException("company name is required");
+            throw new BadDataException(
+                    messageService.getMessage("company.name.required")
+            );
         }
         if(request.getContactPerson() == null || request.getContactPerson().isBlank()){
-            throw new BadDataException("contact person is required");
+            throw new BadDataException(
+                    messageService.getMessage("contact.person.required")
+            );
         }
         if(request.getCommercialRegNo() == null || request.getCommercialRegNo().isBlank()){
-            throw new BadDataException("commercial registration number is required");
+            throw new BadDataException(
+                    messageService.getMessage("commercial.reg.no.required")
+            );
         }
 
         if(!fileIsNotNull){
-            throw new CompanyDocumentRequiredException(request.getCompanyName());
+            throw new CompanyDocumentRequiredException(
+                    messageService.getMessage("company.document.required",
+                            new Object[]{request.getCompanyName()})
+            );
         }
 
         boolean isMediaFile = (s3Service.isImageFile(request.getFile()) || s3Service.isVideoFile(request.getFile()));
         if (isMediaFile){
-            throw new BadDataException("The uploaded file must be (doc/pdf)");
+            throw new BadDataException(
+                    messageService.getMessage("company.document.invalid.format")
+            );
         }
     }
 }

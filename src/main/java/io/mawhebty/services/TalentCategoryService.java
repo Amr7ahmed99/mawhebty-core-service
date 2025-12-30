@@ -14,9 +14,11 @@ import io.mawhebty.repository.ParticipationTypeRepository;
 import io.mawhebty.repository.TalentCategoryFormKeysRepository;
 import io.mawhebty.repository.TalentCategoryRepository;
 import io.mawhebty.repository.TalentSubCategoryRepository;
+import io.mawhebty.support.MessageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,23 +30,29 @@ public class TalentCategoryService {
     private final TalentSubCategoryRepository talentSubCategoryRepository;
     private final TalentCategoryFormKeysRepository formKeysRepository;
     private final ParticipationTypeRepository participationTypeRepository;
+    private final MessageService messageService; // Added
 
-    /**
-     * Create a new category.
-     */
     @Transactional
     public void createCategory(CreateTalentCategoryRequest request) {
-        // Check for duplicate name
         if (talentCategoryRepository.existsByNameArAndNameEn(request.getNameEn(), request.getNameAr())) {
-            throw new BadDataException(String.format("Category with name (%s) or (%s) already exists", request.getNameEn(), request.getNameAr()));
+            throw new BadDataException(
+                    messageService.getMessage("category.already.exists",
+                            new Object[]{request.getNameEn(), request.getNameAr()})
+            );
         }
 
         ParticipationType type= participationTypeRepository.findById(request.getParticipationTypeId())
-                .orElseThrow(()-> new BadDataException("Invalid participation type with id: " + request.getParticipationTypeId()));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("invalid.participation.type",
+                                new Object[]{request.getParticipationTypeId()})
+                ));
 
         TalentCategory category = talentCategoryRepository.findByPartnerId(request.getPartnerId()).orElse(null);
         if(category != null){
-            throw new BadDataException("Category with partner id " + request.getPartnerId()+ " is already exist");
+            throw new BadDataException(
+                    messageService.getMessage("category.partner.exists",
+                            new Object[]{request.getPartnerId()})
+            );
         }
 
         category = TalentCategory.builder()
@@ -57,18 +65,20 @@ public class TalentCategoryService {
         talentCategoryRepository.save(category);
     }
 
-    /**
-     * Create a new subCategory.
-     */
     @Transactional
     public void createSubCategory(CreateTalentSubCategoryRequest request) {
-        // Check for duplicate name
         if (talentSubCategoryRepository.existsByNameArAndNameEn(request.getNameEn(), request.getNameAr())) {
-            throw new BadDataException(String.format("SubCategory with name (%s) or (%s) already exists", request.getNameEn(), request.getNameAr()));
+            throw new BadDataException(
+                    messageService.getMessage("subcategory.already.exists",
+                            new Object[]{request.getNameEn(), request.getNameAr()})
+            );
         }
 
         TalentCategory parent = talentCategoryRepository.findByPartnerId(request.getPartnerCategoryId())
-                .orElseThrow(() -> new BadDataException("Parent category not found with id: " + request.getPartnerCategoryId()));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("parent.category.not.found",
+                                new Object[]{request.getPartnerCategoryId()})
+                ));
 
         TalentSubCategory subCategory = TalentSubCategory.builder()
                 .partnerId(request.getPartnerId())
@@ -80,9 +90,6 @@ public class TalentCategoryService {
         talentSubCategoryRepository.save(subCategory);
     }
 
-    /**
-     * Creates a new form field (TalentCategoryFormKey) and attaches it to a category.
-     */
     @Transactional
     public  void createFormKey(
             Integer fieldKeyId,
@@ -93,27 +100,35 @@ public class TalentCategoryService {
             Integer categoryPartnerId,
             Integer subCategoryPartnerId
     ) {
-        // check TalentCategory exists
         TalentCategory category = talentCategoryRepository.findByPartnerId(categoryPartnerId)
-                .orElseThrow(() -> new BadDataException("Talent category not found with partner id: " + categoryPartnerId));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("talent.category.not.found.partner",
+                                new Object[]{categoryPartnerId})
+                ));
 
         boolean exists;
         TalentSubCategory subCategory = null;
         if (subCategoryPartnerId != null) {
-            // check TalentSubCategory exists
             subCategory = talentSubCategoryRepository.findByPartnerId(subCategoryPartnerId)
-                    .orElseThrow(() -> new BadDataException("Talent subCategory not found with partner id: " + subCategoryPartnerId));
+                    .orElseThrow(() -> new BadDataException(
+                            messageService.getMessage("talent.subcategory.not.found.partner",
+                                    new Object[]{subCategoryPartnerId})
+                    ));
 
             exists = formKeysRepository.existsByFieldKeyIdAndTalentCategoryAndTalentSubCategory(fieldKeyId, category, subCategory);
-            // check if this key already exists in this category
             if (exists) {
-                throw new BadDataException("Field key already exists in this subCategory (fieldKeyId=" + fieldKeyId + ")");
+                throw new BadDataException(
+                        messageService.getMessage("field.key.exists.subcategory",
+                                new Object[]{fieldKeyId})
+                );
             }
         } else {
             exists = formKeysRepository.existsByFieldKeyIdAndTalentCategory(fieldKeyId, category);
-            // check if this key already exists in this category
             if (exists) {
-                throw new BadDataException("Field key already exists in this category (fieldKeyId=" + fieldKeyId + ")");
+                throw new BadDataException(
+                        messageService.getMessage("field.key.exists.category",
+                                new Object[]{fieldKeyId})
+                );
             }
         }
 
@@ -130,9 +145,7 @@ public class TalentCategoryService {
         formKeysRepository.save(formKey);
     }
 
-
     public List<TalentCategoryResponse> fetchAllCategories(){
-
         List<TalentCategoryResponse> categories= talentCategoryRepository.findAll()
                 .stream().map(tc-> TalentCategoryResponse.builder()
                         .id(tc.getPartnerId())
@@ -152,8 +165,6 @@ public class TalentCategoryService {
                         .build())
                 .collect(Collectors.toList());
 
-
         return categories;
     }
-
 }

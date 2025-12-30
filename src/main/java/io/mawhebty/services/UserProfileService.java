@@ -1,15 +1,17 @@
 package io.mawhebty.services;
 
 import io.mawhebty.enums.UserRoleEnum;
-import io.mawhebty.enums.UserTypeEnum;
 import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.*;
 import io.mawhebty.repository.*;
-import org.springframework.stereotype.Service;
 import io.mawhebty.dtos.requests.DraftRegistrationRequest;
 import io.mawhebty.exceptions.ResourceNotFoundException;
+import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
@@ -19,12 +21,16 @@ public class UserProfileService {
     private final CompanyResearcherProfileRepository companyResearcherProfileRepository;
     private final ParticipationTypeRepository participationTypeRepository;
     private final GenderRepository genderRepository;
-    private final UserTypeRepository userTypeRepository;
+    private final MessageService messageService;
 
-    public TalentProfile createTalentProfile(User user, DraftRegistrationRequest request, TalentCategory talentCategory, TalentSubCategory talentSubCategory) {
+    public TalentProfile createTalentProfile(User user, DraftRegistrationRequest request,
+                                             TalentCategory talentCategory, TalentSubCategory talentSubCategory) {
         TalentProfile profile = new TalentProfile();
         ParticipationType type = participationTypeRepository.findById(request.getParticipationTypeId())
-                .orElseThrow(()-> new BadDataException("Invalid participation type with id: " + request.getParticipationTypeId()));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("invalid.participation.type",
+                                new Object[]{request.getParticipationTypeId()})
+                ));
         profile.setUser(user);
         profile.setFirstName(request.getFirstName());
         profile.setLastName(request.getLastName());
@@ -36,9 +42,11 @@ public class UserProfileService {
         profile.setSubCategory(talentSubCategory);
 
         Gender gender = genderRepository.findById(request.getGender())
-            .orElseThrow(() -> new ResourceNotFoundException("Gender not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("gender.not.found")
+                ));
         profile.setGender(gender);
-        
+
         profile.setShortBio(request.getShortBio());
         // profile.setProfilePicture(fileUrl);
 
@@ -85,10 +93,11 @@ public class UserProfileService {
         }
     }
 
-
     public ResearcherProfile getResearcherProfileByType(Long userId, UserType userType){
         if (userType == null || userType.getType() == null) {
-            throw new BadDataException("user type is required");
+            throw new BadDataException(
+                    messageService.getMessage("user.type.required")
+            );
         }
         return switch (userType.getType()) {
             case INDIVIDUAL -> individualResearcherProfileRepository.findByUserId(userId).orElse(null);
@@ -99,7 +108,10 @@ public class UserProfileService {
     public Object getUserProfile(User user){
         if (user.getRole().getName().equals(UserRoleEnum.TALENT)) {
             return talentProfileRepository.findByUserId(user.getId())
-                    .orElseThrow(()-> new BadDataException("the user does not have talent profile"));
+                    .orElseThrow(() -> new BadDataException(
+                            messageService.getMessage("talent.profile.not.found",
+                                    new Object[]{user.getId()})
+                    ));
         }
 
         return this.getResearcherProfileByType(user.getId(), user.getUserType());
