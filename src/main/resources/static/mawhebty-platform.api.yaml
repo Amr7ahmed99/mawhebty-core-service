@@ -161,6 +161,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /profile/user/saved-items:
+    get:
+      tags:
+        - MawhebtyPlatformUserSavedItems
+      summary: Get user saved items
+      description: Get user's saved posts, events, and articles
+      operationId: getUserSavedItems
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: item_type
+          in: query
+          description: Filter by item type (1=posts, 2=events, 3=articles)
+          required: false
+          schema:
+            type: integer
+            enum: [ 1, 2, 3 ]
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: List of saved items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedItemsData'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -292,3 +350,95 @@ components:
         followedAt:
           type: string
           format: date-time
+
+    SavedItemsData:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedPost'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedEvent'
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedArticle'
+
+    SavedPost:
+      type: object
+      properties:
+        id:
+          type: integer
+        owner:
+          $ref: '#/components/schemas/SavedItemOwner'
+        title:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        date:
+          type: string
+          format: date-time
+        saved_at:
+          type: string
+          format: date-time
+
+    SavedEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        location_coordinates:
+          type: string
+        image_url:
+          type: string
+        date:
+          type: string
+          format: date-time
+        saved_at:
+          type: string
+          format: date-time
+
+    SavedArticle:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        image_url:
+          type: string
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        saved_at:
+          type: string
+          format: date-time
+
+    SavedItemOwner:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        image_url:
+          type: string
