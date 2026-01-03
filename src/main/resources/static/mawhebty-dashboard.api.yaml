@@ -1,0 +1,306 @@
+openapi: 3.0.3
+info:
+  title: Mawhebty dashboard api
+  description: API for mawhebty dashboard end-points
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1/internal-services/core
+    description: Local development server
+  - url: https://admin.mawhebty.com
+    description: Production server.
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /events:
+    post:
+      tags:
+        - Events
+      summary: Create a new event
+      description: Create a new event
+      operationId: createEvent
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequest'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /events/{id}:
+    put:
+      tags:
+        - Events
+      summary: Update event
+      description: Update event details
+      operationId: updateEvent
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEventRequest'
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Events
+      summary: Delete event
+      description: Delete event by ID
+      operationId: deleteEvent
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '204':
+          description: Event deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Base Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - error
+        - code
+        - timestamp
+
+    # Events Schemas
+    EventResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        location_coordinates:
+          type: string
+        cover_image_url:
+          type: string
+        status:
+          type: string
+        type:
+          type: string
+        max_attendees:
+          type: integer
+        current_attendees:
+          type: integer
+        is_free:
+          type: boolean
+        ticket_price:
+          type: number
+        registration_url:
+          type: string
+        event_link:
+          type: string
+        tags:
+          type: string
+        category_id:
+          type: number
+        sub_category_id:
+          type: number
+
+    CreateEventRequest:
+      type: object
+      required:
+        - title
+        - event_date
+        - location
+        - category_id
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        location_coordinates:
+          type: string
+          pattern: '^-?\d+(\.\d+)?,-?\d+(\.\d+)?$'
+        cover_image_url:
+          type: string
+        status:
+          type: string
+          enum: [UPCOMING, ONGOING, COMPLETED, CANCELLED]
+          default: UPCOMING
+        type:
+          type: string
+          enum: [GENERAL, WORKSHOP, CONFERENCE]
+          default: GENERAL
+        max_attendees:
+          type: integer
+          minimum: 1
+        is_free:
+          type: boolean
+          default: true
+        ticket_price:
+          type: number
+          minimum: 0
+        category_id:
+          type: number
+          minimum: 0
+        sub_category_id:
+          type: number
+        registration_url:
+          type: string
+        event_link:
+          type: string
+        tags:
+          type: string
+
+    UpdateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        location_coordinates:
+          type: string
+          pattern: '^-?\d+(\.\d+)?,-?\d+(\.\d+)?$'
+        cover_image_url:
+          type: string
+        status:
+          type: string
+          enum: [UPCOMING, ONGOING, COMPLETED, CANCELLED]
+        type:
+          type: string
+          enum: [GENERAL, WORKSHOP, CONFERENCE, NETWORKING]
+        max_attendees:
+          type: integer
+          minimum: 1
+        is_free:
+          type: boolean
+        ticket_price:
+          type: number
+          minimum: 0
+        registration_url:
+          type: string
+        event_link:
+          type: string
+        tags:
+          type: string
+

@@ -1,9 +1,8 @@
 package io.mawhebty.services.auth;
 
-import io.mawhebty.exceptions.UserNotFoundException;
 import io.mawhebty.models.User;
-import io.mawhebty.repository.UserRepository;
 import io.mawhebty.security.CustomUserDetails;
+import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -12,11 +11,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CurrentUserService {
 
-    private final UserRepository userRepository;
+    private final MessageService messageService; // Added
 
     public User getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalArgumentException("User not authenticated");
+            throw new IllegalArgumentException(
+                    messageService.getMessage("user.not.authenticated")
+            );
         }
 
         return ((CustomUserDetails) authentication.getPrincipal()).getUser();

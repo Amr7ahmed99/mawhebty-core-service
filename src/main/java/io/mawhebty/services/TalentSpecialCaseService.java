@@ -12,6 +12,7 @@ import io.mawhebty.repository.MediaModerationRepository;
 import io.mawhebty.repository.MediaModerationStatusRepository;
 import io.mawhebty.repository.TalentSpecialCaseRepository;
 import io.mawhebty.repository.UserRepository;
+import io.mawhebty.support.MessageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,20 +26,27 @@ public class TalentSpecialCaseService {
     private final MediaModerationRepository mediaModerationRepository;
     private final MediaModerationStatusRepository mediaModerationStatusRepository;
     private final UserRepository userRepository;
+    private final MessageService messageService; // Added
 
     @Transactional
     public void createSpecialCase(TalentSpecialCaseRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(UserNotFoundException::new);
+                .orElseThrow(() -> new UserNotFoundException(
+                        messageService.getMessage("user.not.found.email.generic")
+                ));
 
         if (talentSpecialCaseRepository.existsByUserId(user.getId())) {
-            throw new IllegalStateException("Special case already exists for this user.");
+            throw new IllegalStateException(
+                    messageService.getMessage("special.case.already.exists")
+            );
         }
 
         // Validate file extension
         if(!s3Service.isDocumentFile(request.getFile())){
-            throw new BadDataException("Invalid file format, must be pdf/doc");
+            throw new BadDataException(
+                    messageService.getMessage("special.case.invalid.file.format")
+            );
         }
 
         //Upload file to S3
@@ -50,7 +58,6 @@ public class TalentSpecialCaseService {
                 .s3FileUrl(fileUrl)
                 .shortBrief(request.getShortBrief())
                 .build());
-
 
         // Send message to SQS for moderation
         boolean messageWasSent= moderationQueueService.sendFileForModeration(
@@ -64,9 +71,11 @@ public class TalentSpecialCaseService {
 
         // in case the message successfully delivered to sqs, create moderation record
         if(messageWasSent){
-            // create moderation record for this specialCase
             MediaModerationStatus status= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.PENDING.getName())
-                    .orElseThrow(() -> new ResourceNotFoundException("PENDING status not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            messageService.getMessage("media.moderation.status.not.found",
+                                    new Object[]{MediaModerationStatusEnum.PENDING.getName()})
+                    ));
 
             MediaModeration savedModeration = mediaModerationRepository.save(MediaModeration.builder()
                     .status(status)
@@ -75,34 +84,49 @@ public class TalentSpecialCaseService {
             specialCase.setMediaModeration(savedModeration);
             talentSpecialCaseRepository.save(specialCase);
         }
-
     }
 
     public void moderateSpecialCase(ModerateUserRequestDto request){
-        // create moderation record for this specialCase
         MediaModerationStatus pendingStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.PENDING.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("PENDING status not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("media.moderation.status.not.found",
+                                new Object[]{MediaModerationStatusEnum.PENDING.getName()})
+                ));
 
         MediaModeration media= mediaModerationRepository.findById(request.getMediaId())
-                .orElseThrow(()-> new BadDataException("no moderation found with id: "+ request.getMediaId()));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("moderation.not.found",
+                                new Object[]{request.getMediaId()})
+                ));
 
         if(!pendingStatus.getName().equals(media.getStatus().getName())){
-            throw new IllegalStateException("can not "+ request.getDecision() +" "+ request.getFileType() +", media is not pending for moderation.");
+            throw new IllegalStateException(
+                    messageService.getMessage("moderation.not.pending",
+                            new Object[]{request.getDecision(), request.getFileType()})
+            );
         }
 
         if("approved".equals(request.getDecision())){
             MediaModerationStatus approvedStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.APPROVED.getName())
-                    .orElseThrow(() -> new ResourceNotFoundException("APPROVED status not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            messageService.getMessage("media.moderation.status.not.found",
+                                    new Object[]{MediaModerationStatusEnum.APPROVED.getName()})
+                    ));
             media.setStatus(approvedStatus);
         }else if("rejected".equals(request.getDecision()) && request.getReason() != null && !request.getReason().isBlank()){
             MediaModerationStatus rejectedStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.REJECTED.getName())
-                    .orElseThrow(() -> new ResourceNotFoundException("REJECTED status not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            messageService.getMessage("media.moderation.status.not.found",
+                                    new Object[]{MediaModerationStatusEnum.REJECTED.getName()})
+                    ));
             media.setStatus(rejectedStatus);
             media.setReason(request.getReason());
         }else {
-            throw new BadDataException("unsupported decision: "+ request.getDecision());
+            throw new BadDataException(
+                    messageService.getMessage("unsupported.decision",
+                            new Object[]{request.getDecision()})
+            );
         }
-
 
         mediaModerationRepository.save(media);
     }

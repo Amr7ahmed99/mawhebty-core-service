@@ -133,39 +133,57 @@ public class UserService {
 
     public void rejectUserAccount(ModerateUserRequestDto req) {
         User user = userRepository.findById(req.getUserId())
-                .orElseThrow(() -> new UserNotFoundException(req.getUserId()));
+                .orElseThrow(() -> new UserNotFoundException(
+                        messageService.getMessage("user.not.found.id", new Object[]{req.getUserId()})
+                ));
 
         if(!user.getStatus().getName().equals(UserStatusEnum.PENDING_MODERATION.getName())){
-            throw new IllegalStateException("Can not reject user at current state: "+user.getStatus().getName());
+            throw new IllegalStateException(
+                    messageService.getMessage("user.cannot.reject.state",
+                            new Object[]{user.getStatus().getName()})
+            );
         }
 
         if(req.getReason() == null || req.getReason().isBlank()){
-            throw new BadDataException("Rejection reason must not be null");
+            throw new BadDataException(
+                    messageService.getMessage("rejection.reason.required")
+            );
         }
 
         UserStatus userRejectedStatus = userStatusRepository.findByName(UserStatusEnum.REJECTED.getName())
-                .orElseThrow(() -> new UserStatusNotFoundException("REJECTED status not found"));
+                .orElseThrow(() -> new UserStatusNotFoundException(
+                        messageService.getMessage("status.not.found",
+                                new Object[]{UserStatusEnum.REJECTED.getName()})
+                ));
 
         user.setStatus(userRejectedStatus);
         userRepository.save(user);
 
-        //active first post and media moderation
         Post userRegisterationPost= postRepository.findByIdAndOwnerUserIdAndTypeId(req.getMediaId(), req.getUserId(), PostTypeEnum.REGISTRATION_FILE.getId())
                 .orElseThrow(()-> new ResourceNotFoundException(
-                        String.format("Registration file not found for user: %d, post: %d", req.getUserId(), req.getMediaId())
+                        messageService.getMessage("registration.file.not.found",
+                                new Object[]{req.getUserId(), req.getMediaId()})
                 ));
 
         PostStatus postRejectedStatus = postStatusRepository.findByName(PostStatusEnum.REJECTED.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("REJECTED post status not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("post.status.not.found",
+                                new Object[]{PostStatusEnum.REJECTED.getName()})
+                ));
 
         userRegisterationPost.setStatus(postRejectedStatus);
 
-        // change media moderation to rejected
         MediaModerationStatus mediaRejectedStatus= mediaModerationStatusRepository.findByName(MediaModerationStatusEnum.REJECTED.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("REJECTED status not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("media.moderation.status.not.found",
+                                new Object[]{MediaModerationStatusEnum.REJECTED.getName()})
+                ));
 
         if(userRegisterationPost.getMediaModeration() == null){
-            throw new IllegalStateException("Media moderation record not found for post: "+ req.getMediaId());
+            throw new IllegalStateException(
+                    messageService.getMessage("media.moderation.record.not.found",
+                            new Object[]{req.getMediaId()})
+            );
         }
 
         userRegisterationPost.getMediaModeration().setCheckedAt(LocalDateTime.now());
@@ -177,7 +195,6 @@ public class UserService {
 
         this.postRepository.save(userRegisterationPost);
     }
-
     public FindOrCreateUserDto findOrCreateByEmail(String email){
         boolean isNewUser = false;
 

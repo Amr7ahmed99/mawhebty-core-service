@@ -7,6 +7,7 @@ import io.mawhebty.models.TalentProfile;
 import io.mawhebty.repository.TalentCategoryFormKeysRepository;
 import io.mawhebty.repository.TalentCategoryFormValueRepository;
 import io.mawhebty.repository.TalentProfileRepository;
+import io.mawhebty.support.MessageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,12 +24,12 @@ public class TalentFormValueService {
     private final TalentProfileRepository talentProfileRepository;
     private final TalentCategoryFormKeysRepository formKeysRepository;
     private final TalentCategoryFormValueRepository formValueRepository;
+    private final MessageService messageService; // Added
 
     @Transactional
     public void saveTalentFormValues(TalentProfile talentProfile, Map<Integer, Object> formFieldsValuesMap,
                                      List<TalentCategoryFormKeys> talentCategoryFormKeys) {
 
-        // prepare list of formValues
         List<TalentCategoryFormValue> talentCategoryFormValues= new ArrayList<>();
 
         talentCategoryFormKeys.forEach(formKey->{
@@ -49,40 +50,21 @@ public class TalentFormValueService {
         });
 
         formValueRepository.saveAll(talentCategoryFormValues);
-
-//        for (Map.Entry<Integer, Object> entry : formFieldsValuesMap.entrySet()) {
-//            Integer fieldKeyId = entry.getKey();
-//            Object rawValue = entry.getValue();
-//
-//            TalentCategoryFormKeys formKey = formKeysRepository.findByFieldKeyId(fieldKeyId)
-//                    .orElseThrow(() -> new RuntimeException("Form key not found: " + fieldKeyId));
-//
-//            String storedValue;
-//            if (rawValue instanceof List<?>) {
-//                storedValue = ((List<?>) rawValue).stream()
-//                        .map(String::valueOf)
-//                        .collect(Collectors.joining(","));
-//            } else {
-//                storedValue = String.valueOf(rawValue);
-//            }
-//
-//            talentCategoryFormValues.add(TalentCategoryFormValue.builder()
-//                    .talentProfile(talentProfile)
-//                    .formKey(formKey)
-//                    .value(storedValue)
-//                    .build());
-//        }
-//
-//        formValueRepository.saveAll(talentCategoryFormValues);
     }
 
     @Transactional
     public void updateTalentFormValue(Long talentProfileId, Integer fieldKeyId, Object rawValue) {
         TalentProfile talentProfile = talentProfileRepository.findById(talentProfileId)
-                .orElseThrow(() -> new BadDataException("Talent profile not found"));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("talent.profile.not.found.id",
+                                new Object[]{talentProfileId})
+                ));
 
         TalentCategoryFormKeys formKey = formKeysRepository.findByFieldKeyId(fieldKeyId)
-                .orElseThrow(() -> new BadDataException("Form key not found: " + fieldKeyId));
+                .orElseThrow(() -> new BadDataException(
+                        messageService.getMessage("form.key.not.found",
+                                new Object[]{fieldKeyId})
+                ));
 
         String storedValue;
         if (rawValue instanceof List<?>) {
@@ -103,6 +85,4 @@ public class TalentFormValueService {
         formValue.setValue(storedValue);
         formValueRepository.save(formValue);
     }
-
 }
-

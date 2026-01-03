@@ -46,13 +46,26 @@ public class TalentSubCategory extends BaseEntity {
 
     @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
+    @Builder.Default
     private List<TalentProfile> talentProfiles = new ArrayList<>();
 
     @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
+    @Builder.Default
     private List<CompanyResearcherProfile> companyResearcherProfiles = new ArrayList<>();
 
     @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
+    @Builder.Default
     private List<IndividualResearcherProfile> individualResearcherProfiles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private List<Article> articles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    List<Event> events= new ArrayList<>();
 }

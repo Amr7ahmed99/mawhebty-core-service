@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (userEmail == null) {
                 log.warn("Invalid JWT token - no email claim for path: {}", path);
-                sendErrorResponse(response, "Invalid token - no email claim", HttpStatus.UNAUTHORIZED);
+                sendErrorResponse(response, "Invalid token - no email claim");
                 return;
             }
 
@@ -84,14 +84,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (user == null) {
                     log.warn("User not found for email: {} path: {}", userEmail, path);
-                    sendErrorResponse(response, "User not found", HttpStatus.UNAUTHORIZED);
+                    sendErrorResponse(response, "User not found");
                     return;
                 }
 
                 // Validate token (both full and limited access)
                 if (!jwtService.validateToken(cleanToken)) {
                     log.warn("Invalid JWT token for user: {} path: {}", userEmail, path);
-                    sendErrorResponse(response, "Invalid token", HttpStatus.UNAUTHORIZED);
+                    sendErrorResponse(response, "Invalid token");
                     return;
                 }
 
@@ -99,7 +99,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long tokenUserId = jwtService.getUserIdFromToken(cleanToken);
                 if (!user.getId().equals(tokenUserId)) {
                     log.warn("Token user ID mismatch for user: {} path: {}", userEmail, path);
-                    sendErrorResponse(response, "Token user ID mismatch", HttpStatus.UNAUTHORIZED);
+                    sendErrorResponse(response, "Token user ID mismatch");
                     return;
                 }
 
@@ -135,23 +135,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (ExpiredJwtException e) {
             log.warn("JWT Token expired for path: {}", path);
-            sendErrorResponse(response, "Token has expired", HttpStatus.UNAUTHORIZED);
+            sendErrorResponse(response, "Token has expired");
 
         } catch (Exception e) {
             log.error("Failed to process JWT token for path: {} - Error: {}", path, e.getMessage(), e);
-            sendErrorResponse(response, e.getMessage(), HttpStatus.UNAUTHORIZED);
+            sendErrorResponse(response, e.getMessage());
         }
     }
 
-    private void sendErrorResponse(HttpServletResponse response, String message, HttpStatus status)
+    private void sendErrorResponse(HttpServletResponse response, String message)
             throws IOException {
-        response.setStatus(status.value());
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         String jsonResponse = String.format(
                 "{\"error\": \"%s\", \"message\": \"%s\", \"status\": %d}",
-                status.getReasonPhrase(), message, status.value()
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(), message, HttpStatus.UNAUTHORIZED.value()
         );
 
         response.getWriter().write(jsonResponse);

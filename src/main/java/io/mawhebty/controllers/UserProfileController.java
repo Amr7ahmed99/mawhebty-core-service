@@ -8,6 +8,7 @@ import io.mawhebty.models.*;
 import io.mawhebty.services.UserFollowService;
 import io.mawhebty.services.UserProfileService;
 import io.mawhebty.services.auth.CurrentUserService;
+import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -28,6 +29,7 @@ public class UserProfileController extends AbstractMawhebtyPlatformController
     private final UserProfileService userProfileService;
     private final UserFollowService userFollowService;
     private final CurrentUserService currentUserService;
+    private final MessageService messageService;
 
     @Override
     public ResponseEntity<UserProfileDataResponseResource> userProfile() {
@@ -46,15 +48,16 @@ public class UserProfileController extends AbstractMawhebtyPlatformController
             // Build response based on user type
             UserProfileDataResponseResource response = buildResponse(profile, followCounts, currentUser);
 
-            log.info("User profile retrieved successfully for user: {}", currentUser.getId());
+            log.info(messageService.getMessage("user.profile.retrieved.success",
+                    new Object[]{currentUser.getId()}));
             return ResponseEntity.ok().body(response);
 
         } catch (UserNotFoundException e) {
-            log.error("User not found: {}", e.getMessage());
+            log.error(messageService.getMessage("user.not.found"), e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Error retrieving user profile: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to retrieve user profile", e);
+            log.error(messageService.getMessage("user.profile.retrieve.error"), e.getMessage(), e);
+            throw new RuntimeException(messageService.getMessage("user.profile.retrieve.error"), e);
         }
     }
 
@@ -70,7 +73,8 @@ public class UserProfileController extends AbstractMawhebtyPlatformController
         } else if (profile instanceof CompanyResearcherProfile companyResearcherProfile) {
             buildCompanyResearcherResponse(response, companyResearcherProfile, followCounts, user, locale);
         } else {
-            log.warn("Unknown profile type: {}", profile.getClass().getName());
+            log.warn(messageService.getMessage("unknown.profile.type",
+                    new Object[]{profile != null ? profile.getClass().getName() : "null"}));
             buildBasicUserResponse(response, followCounts, user);
         }
 
