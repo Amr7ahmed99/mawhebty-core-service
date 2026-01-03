@@ -14,6 +14,7 @@ security:
   - ApiKeyAuth: []
 
 paths:
+  # User Profile APIs
   /profile/user:
     get:
       tags:
@@ -49,6 +50,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Follow/Unfollow APIs
   /profile/user/follow/{userId}:
     post:
       tags:
@@ -161,6 +163,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Saved Items APIs
   /profile/user/saved-items:
     get:
       tags:
@@ -219,6 +222,447 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Events CRUD APIs
+  /events:
+    get:
+      tags:
+        - Events
+      summary: Get list of events
+      description: Get events with optional filtering and pagination
+      operationId: getEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by event status
+          required: false
+          schema:
+            type: string
+            enum: [UPCOMING, ONGOING, COMPLETED, CANCELLED]
+        - name: type
+          in: query
+          description: Filter by event type
+          required: false
+          schema:
+            type: string
+            enum: [GENERAL, WORKSHOP, CONFERENCE]
+        - name: is_free
+          in: query
+          description: Filter free events only
+          required: false
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search in title, description, location, tags
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+        - name: start_date
+          in: query
+          description: Filter events starting from this date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: Filter events ending before this date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sort_by
+          in: query
+          description: Sort by date desc/asc
+          required: false
+          example: date_desc, date_asc
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Get event by ID
+      description: Get event with related details by ID
+      operationId: getEventById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Event with related details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWithRelatedResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /events/{id}/register:
+    post:
+      tags:
+        - Events
+      summary: Register for event
+      description: Register current user for an event
+      operationId: registerForEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully registered for event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventRegistrationResponse'
+        '400':
+          description: Bad request (event full, already registered, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Articles CRUD APIs
+  /articles:
+    get:
+      tags:
+        - Articles
+      summary: Get list of articles
+      description: Get articles with optional filtering and pagination
+      operationId: getArticles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: query
+          description: Filter by category ID
+          required: false
+          schema:
+            type: integer
+        - name: sub_category_id
+          in: query
+          description: Filter by sub-category ID
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Search in title, description, tags
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+        - name: sort_by
+          in: query
+          description: Sort by date desc/asc
+          required: false
+          example: date_desc, date_asc
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    # TODO: MOVE IT TO Dashboard.yml
+    post:
+      tags:
+        - Articles
+      summary: Create a new article
+      description: Create a new article with sections
+      operationId: createArticle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Article created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /articles/{id}:
+    get:
+      tags:
+        - Articles
+      summary: Get article by ID
+      description: Get article details with sections
+      operationId: getArticleById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Articles
+      summary: Update article
+      description: Update article details and sections
+      operationId: updateArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateArticleRequest'
+      responses:
+        '200':
+          description: Article updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Articles
+      summary: Delete article
+      description: Delete article by ID
+      operationId: deleteArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Article deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /articles/{id}/sections:
+    get:
+      tags:
+        - Articles
+      summary: Get article sections
+      description: Get all sections of an article
+      operationId: getArticleSections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of article sections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleSectionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -232,6 +676,7 @@ components:
       bearerFormat: JWT
 
   schemas:
+    # Base Error Response
     ErrorResponse:
       type: object
       properties:
@@ -247,6 +692,7 @@ components:
         - code
         - timestamp
 
+    # OTP Response
     OTPGenerationResponse:
       type: object
       properties:
@@ -262,6 +708,7 @@ components:
           type: string
           format: date-time
 
+    # User Profile Responses
     UserProfileDataResponse:
       type: object
       properties:
@@ -351,6 +798,7 @@ components:
           type: string
           format: date-time
 
+    # Saved Items Responses
     SavedItemsData:
       type: object
       properties:
@@ -442,3 +890,360 @@ components:
           type: string
         image_url:
           type: string
+    # Events Schemas
+    EventResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        location_coordinates:
+          type: string
+        cover_image_url:
+          type: string
+        status:
+          type: string
+        type:
+          type: string
+        max_attendees:
+          type: integer
+        current_attendees:
+          type: integer
+        is_free:
+          type: boolean
+        ticket_price:
+          type: number
+        registration_url:
+          type: string
+        event_link:
+          type: string
+        tags:
+          type: string
+        category_id:
+          type: number
+        sub_category_id:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EventWithRelatedResponse:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        location_coordinates:
+          type: string
+        image_url:
+          type: string
+        status:
+          type: string
+        type:
+          type: string
+        max_attendees:
+          type: integer
+        current_attendees:
+          type: integer
+        is_free:
+          type: boolean
+        ticket_price:
+          type: number
+        registration_url:
+          type: string
+        event_link:
+          type: string
+        tags:
+          type: string
+        related_events:
+          type: array
+          description: "Up to 5 related events based on category and sub-category"
+          items:
+            $ref: '#/components/schemas/EventSummary'
+
+
+
+    EventListResponse:
+      type: object
+      properties:
+        total_items:
+          type: number
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventListItem'
+
+    EventListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        image_url:
+          type: string
+        date:
+          type: string
+          format: date-time
+
+    EventSummary:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        image_url:
+          type: string
+        date:
+          type: string
+          format: date-time
+
+    EventRegistrationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        registration_id:
+          type: integer
+        event_id:
+          type: integer
+        user_id:
+          type: integer
+        registered_at:
+          type: string
+          format: date-time
+
+    # Articles Schemas
+    CreateArticleRequest:
+      type: object
+      required:
+        - title
+        - category_id
+        - sub_category_id
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        image_url:
+          type: string
+          
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+        status:
+          type: string
+          enum: [PUBLISHED, DRAFT, ARCHIVED]
+          default: DRAFT
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateArticleSection'
+
+    CreateArticleSection:
+      type: object
+      required:
+        - section_order
+        - content
+      properties:
+        section_order:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+        image_url:
+          type: string
+          
+        video_url:
+          type: string
+          
+        embed_code:
+          type: string
+
+    UpdateArticleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        cover_image_url:
+          type: string
+          
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+        status:
+          type: string
+          enum: [PUBLISHED, DRAFT, ARCHIVED]
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateArticleSection'
+
+    UpdateArticleSection:
+      type: object
+      properties:
+        id:
+          type: integer
+        section_order:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+        image_url:
+          type: string
+          
+        video_url:
+          type: string
+          
+        embed_code:
+          type: string
+
+    ArticleResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        cover_image_url:
+          type: string
+        category:
+          $ref: '#/components/schemas/category'
+        sub_category:
+          $ref: '#/components/schemas/subcategory'
+        status:
+          type: string
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSectionResponse'
+
+    ArticleListResponse:
+      type: object
+      properties:
+        total_items:
+          type: number
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+
+    ArticleSummary:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        image_url:
+          type: string
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+
+    ArticleSectionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        section_order:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+        video_url:
+          type: string
+        embed_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

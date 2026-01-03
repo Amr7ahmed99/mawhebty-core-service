@@ -1,5 +1,6 @@
 package io.mawhebty.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.mawhebty.enums.EventStatus;
 import io.mawhebty.enums.EventType;
 import jakarta.persistence.*;
@@ -79,6 +80,17 @@ public class Event extends BaseEntity {
 
     @Column(name = "tags", length = 1000)
     private String tags; // Comma-separated tags
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
+    private TalentCategory category;
+
+    @ManyToOne
+    @JoinColumn(name = "sub_category_id")
+    @JsonIgnore
+    private TalentSubCategory subCategory;
+
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

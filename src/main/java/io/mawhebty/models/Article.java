@@ -35,7 +35,7 @@ public class Article extends BaseEntity {
     private String coverImageUrl;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     @JsonIgnore
     private TalentCategory category;
 

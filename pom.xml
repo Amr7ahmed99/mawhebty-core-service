@@ -273,6 +273,33 @@
                         </typeMappings>
                     </configuration>
                 </execution>
+                <execution>
+                    <id>generate-mawhebty-dashboard-v1-api-interfaces</id>
+                    <goals>
+                        <goal>generate</goal>
+                    </goals>
+                    <configuration>
+                        <inputSpec>${project.basedir}/src/main/resources/static/mawhebty-dashboard.api.yaml</inputSpec>
+                        <generatorName>spring</generatorName>
+                        <modelNameSuffix>Resource</modelNameSuffix>
+                        <skipValidateSpec>false</skipValidateSpec>
+                        <configOptions>
+                            <packageName>${api.package}.v1.mawhebtyDashboard</packageName>
+                            <apiPackage>${api.package}.v1.mawhebtyDashboard</apiPackage>
+                            <modelPackage>${api.package}.v1.resources.mawhebtyDashboard</modelPackage>
+                            <dateLibrary>java8</dateLibrary>
+                            <delegatePattern>true</delegatePattern>
+                            <useBeanValidation>true</useBeanValidation>
+                            <interfaceOnly>true</interfaceOnly>
+                            <useTags>true</useTags>
+                            <useSpringBoot3>true</useSpringBoot3>
+                            <swaggerDocketConfig>false</swaggerDocketConfig>
+                        </configOptions>
+                        <typeMappings>
+                            <typeMapping>OffsetDateTime=java.time.LocalDateTime</typeMapping>
+                        </typeMappings>
+                    </configuration>
+                </execution>
             </executions>
         </plugin>
         <plugin>
