@@ -1,6 +1,9 @@
 package io.mawhebty.services;
 
 import io.mawhebty.api.v1.resources.mawhebtyDashboard.*;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleResponseResource;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.CategoryResource;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.SubcategoryResource;
 import io.mawhebty.dtos.responses.ArticleSummaryResponse;
 import io.mawhebty.enums.ArticleStatusEnum;
 import io.mawhebty.dtos.requests.CreateArticleRequest;
@@ -87,7 +90,7 @@ public class ArticleService {
                 .build();
     }
 
-    public ArticleResponseResource createArticle(CreateArticleRequest request) {
+    public ArticleDashboardResponseResource createArticle(CreateArticleRequest request) {
 
         TalentCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
@@ -127,10 +130,10 @@ public class ArticleService {
         }
 
         Article savedArticle = articleRepository.save(article);
-        return mapToResponse(savedArticle);
+        return mapToArticleDashboardResponse(savedArticle);
     }
 
-    public ArticleResponseResource updateArticle(
+    public ArticleDashboardResponseResource updateArticle(
             Long articleId,
             UpdateArticleRequestResource request
     ) {
@@ -196,7 +199,7 @@ public class ArticleService {
         }
 
         Article updated = articleRepository.save(article);
-        return mapToResponse(updated);
+        return mapToArticleDashboardResponse(updated);
     }
 
 
@@ -210,10 +213,10 @@ public class ArticleService {
     }
 
 
-    private ArticleResponseResource mapToResponse(Article article) {
+    private ArticleDashboardResponseResource mapToArticleDashboardResponse(Article article) {
         Locale locale = LocaleContextHolder.getLocale();
 
-        ArticleResponseResource response = new ArticleResponseResource();
+        ArticleDashboardResponseResource response = new ArticleDashboardResponseResource();
         response.setId(article.getId().intValue());
         response.setTitle(article.getTitle());
         response.setCoverImageUrl(article.getCoverImageUrl());
@@ -247,5 +250,62 @@ public class ArticleService {
 
         return response;
     }
+
+    private ArticleResponseResource mapToResponse(Article article) {
+        Locale locale = LocaleContextHolder.getLocale();
+
+        CategoryResource cat= new CategoryResource();
+        SubcategoryResource subCat= new SubcategoryResource();
+
+        cat.setId(article.getCategory().getId());
+        cat.setName("en".equals(locale.getLanguage())?
+                article.getCategory().getNameEn(): article.getCategory().getNameAr());
+
+        subCat.setId(article.getSubCategory().getId());
+        subCat.setName("en".equals(locale.getLanguage())?
+                article.getSubCategory().getNameEn(): article.getSubCategory().getNameAr());
+
+        ArticleResponseResource response = new ArticleResponseResource();
+        response.setId(article.getId().intValue());
+        response.setTitle(article.getTitle());
+        response.setCoverImageUrl(article.getCoverImageUrl());
+        response.setCategory(cat);
+        response.setSubCategory(subCat);
+        response.setStatus(article.getStatus().name());
+        response.setTags(article.getTags());
+        response.setPublishedAt(
+                article.getPublishedAt() != null
+                        ? article.getPublishedAt()
+                        : null
+        );
+
+        if (article.getSections() != null) {
+            response.setSections(
+                    article.getSections().stream().map(section -> {
+                        io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource r =
+                        new io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource();
+                        r.setId(section.getId().intValue());
+                        r.setSectionOrder(section.getSectionOrder());
+                        r.setTitle(section.getTitle());
+                        r.setContent(section.getContent());
+                        r.setImageUrl(section.getImageUrl());
+                        r.setVideoUrl(section.getVideoUrl());
+                        r.setEmbedCode(section.getEmbedCode());
+                        return r;
+                    }).toList()
+            );
+        }
+
+        return response;
+    }
+
+
+    public ArticleResponseResource getArticleById(Long articleId) {
+        Article article = articleRepository.findPublishedById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("Article not found, or not published"));
+
+        return mapToResponse(article);
+    }
+
 }
 
