@@ -1,5 +1,6 @@
 package io.mawhebty.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,7 +10,9 @@ import lombok.*;
         @Index(name = "idx_post_owner", columnList = "owner_user_id"),
         @Index(name = "idx_post_status", columnList = "status_id"),
         @Index(name = "idx_post_visibility", columnList = "visibility_id"),
-        @Index(name = "idx_post_created", columnList = "createdAt")
+        @Index(name = "idx_post_created", columnList = "createdAt"),
+        @Index(name = "idx_post_category", columnList = "category_id"),
+        @Index(name = "idx_post_sub_category", columnList = "sub_category_id")
     })
 @Getter
 @Setter
@@ -45,4 +48,14 @@ public class Post extends BaseEntity{
     @OneToOne
     @JoinColumn(name = "media_moderation_id")
     private MediaModeration mediaModeration;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
+    private TalentCategory category;
+
+    @ManyToOne
+    @JoinColumn(name = "sub_category_id")
+    @JsonIgnore
+    private TalentSubCategory subCategory;
 }

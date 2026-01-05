@@ -202,7 +202,7 @@ public class RegistrationService {
         }
 
         // 6. Create post with PENDING_MODERATION status
-        createFirstPost(savedUser, fileUrl);
+        createFirstPost(savedUser, fileUrl, talentCategory, talentSubCategory);
 
         return DraftResponse.success(this.prepareUserRegistrationResponse(savedUser, profile), fileUrl);
     }
@@ -216,7 +216,7 @@ public class RegistrationService {
         return userProfileService.createResearcherProfile(user, request, talentCategory, talentSubCategory, false);
     }
 
-    private void createFirstPost(User user, String mediaUrl) {
+    private void createFirstPost(User user, String mediaUrl, TalentCategory tc, TalentSubCategory tsc) {
         try {
             PostType registrationFileType = postTypeRepository.findByName(PostTypeEnum.REGISTRATION_FILE.getName())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -247,6 +247,8 @@ public class RegistrationService {
                     .mediaUrl(mediaUrl)
                     .visibility(privateVisibility)
                     .status(draftStatus)
+                    .category(tc)
+                    .subCategory(tsc)
                     .build();
 
             Post savedPost= postRepository.save(firstPost);

@@ -1,7 +1,6 @@
 package io.mawhebty.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.mawhebty.enums.ParticipationTypesEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -73,4 +72,9 @@ public class TalentCategory extends BaseEntity {
     @JsonIgnore
     @Builder.Default
     List<Event> events= new ArrayList<>();
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    List<Post> posts= new ArrayList<>();
 }

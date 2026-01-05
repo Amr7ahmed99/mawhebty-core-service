@@ -74,4 +74,14 @@ public class Article extends BaseEntity {
         sections.remove(section);
         section.setArticle(null);
     }
+
+    @PrePersist
+    public void onCreate() {
+        this.setCreatedAt(LocalDateTime.now());
+        this.setUpdatedAt(LocalDateTime.now());
+        if (status == ArticleStatusEnum.PUBLISHED && publishedAt == null) {
+            publishedAt = LocalDateTime.now();
+        }
+    }
+
 }

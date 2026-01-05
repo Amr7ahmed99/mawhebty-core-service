@@ -8,7 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "talent_profile")
+@Table(name = "talent_profile",
+        indexes = {
+                @Index(name = "idx_talent_profile_category", columnList = "category_id"),
+                @Index(name = "idx_talent_profile_sub_category", columnList = "sub_category_id"),
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -56,7 +60,7 @@ public class TalentProfile extends BaseEntity {
     private ParticipationType participationType;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     @JsonIgnore
     private TalentCategory category;
 

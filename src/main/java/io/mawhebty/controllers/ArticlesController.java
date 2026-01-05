@@ -2,8 +2,10 @@ package io.mawhebty.controllers;
 
 import io.mawhebty.api.v1.mawhebty.platform.AbstractMawhebtyPlatformController;
 import io.mawhebty.api.v1.mawhebtyPlatform.ArticlesApi;
-import io.mawhebty.api.v1.resources.mawhebtyPlatform.*;
-import io.mawhebty.dtos.responses.*;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleListResponseResource;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSummaryResource;
+import io.mawhebty.dtos.responses.ArticleListResponse;
+import io.mawhebty.dtos.responses.ArticleSummaryResponse;
 import io.mawhebty.services.ArticleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
