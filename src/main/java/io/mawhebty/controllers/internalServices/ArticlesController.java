@@ -2,7 +2,7 @@ package io.mawhebty.controllers.internalServices;
 
 import io.mawhebty.api.v1.mawhebty.dashboard.AbstractMawhebtyDashboardController;
 import io.mawhebty.api.v1.mawhebtyDashboard.ArticlesDashboardApi;
-import io.mawhebty.api.v1.resources.mawhebtyDashboard.ArticleResponseResource;
+import io.mawhebty.api.v1.resources.mawhebtyDashboard.ArticleDashboardResponseResource;
 import io.mawhebty.api.v1.resources.mawhebtyDashboard.CreateArticleRequestResource;
 import io.mawhebty.api.v1.resources.mawhebtyDashboard.UpdateArticleRequestResource;
 import io.mawhebty.dtos.requests.CreateArticleRequest;
@@ -23,9 +23,9 @@ public class ArticlesController extends AbstractMawhebtyDashboardController
     private final ArticleService articleService;
 
     @Override
-    public ResponseEntity<ArticleResponseResource> createArticle(CreateArticleRequestResource requestResource) {
+    public ResponseEntity<ArticleDashboardResponseResource> createArticle(CreateArticleRequestResource requestResource) {
 
-        ArticleResponseResource response =
+        ArticleDashboardResponseResource response =
                 articleService.createArticle(mapToCreateArticleRequest(requestResource));
 
         return ResponseEntity
@@ -34,7 +34,7 @@ public class ArticlesController extends AbstractMawhebtyDashboardController
     }
 
     @Override
-    public ResponseEntity<ArticleResponseResource> updateArticle(
+    public ResponseEntity<ArticleDashboardResponseResource> updateArticle(
             Integer id,
             UpdateArticleRequestResource request
     ) {
@@ -64,8 +64,8 @@ public class ArticlesController extends AbstractMawhebtyDashboardController
         req.setSections(r.getSections());
         return req;
     }
-    private ArticleResponseResource mapToArticleResponseResource(ArticleResponseResource r) {
-        ArticleResponseResource resource = new ArticleResponseResource();
+    private ArticleDashboardResponseResource mapToArticleResponseResource(ArticleDashboardResponseResource r) {
+        ArticleDashboardResponseResource resource = new ArticleDashboardResponseResource();
         resource.setId(r.getId());
         resource.setTitle(r.getTitle());
         resource.setCoverImageUrl(r.getCoverImageUrl());

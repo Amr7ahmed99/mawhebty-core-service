@@ -88,13 +88,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         FROM Post p
         WHERE p.ownerUser.id <> :ownerId
           AND p.status.id = :publishedStatusId
-          AND p.visibility_id = 1
+          AND p.visibility.id = :publicVisibilityId
           AND p.category.id = :categoryId
           AND ( :subCategoryId IS NULL OR p.subCategory.id = :subCategoryId )
     """)
         Page<Post> findPublicByOwnerIdAndCategoryIdSubCategoryId(
                 @Param("ownerId") Long ownerId,
                 @Param("publishedStatusId") Integer publishedStatusId,
+                @Param("publicVisibilityId") Integer publicVisibilityId,
                 @Param("categoryId") Integer categoryId,
                 @Param("subCategoryId") Integer subCategoryId,
                 Pageable pageable

@@ -5,7 +5,7 @@ import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.exceptions.ResourceNotFoundException;
 import io.mawhebty.models.User;
 import io.mawhebty.models.UserFollow;
-import io.mawhebty.repositories.UserFollowRepository;
+import io.mawhebty.repository.UserFollowRepository;
 import io.mawhebty.repository.UserRepository;
 import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;

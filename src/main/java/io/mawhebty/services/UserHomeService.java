@@ -1,6 +1,7 @@
 package io.mawhebty.services;
 
 import io.mawhebty.enums.PostStatusEnum;
+import io.mawhebty.enums.PostVisibilityEnum;
 import io.mawhebty.exceptions.UserNotFoundException;
 import io.mawhebty.models.*;
 import io.mawhebty.repository.*;
@@ -51,8 +52,8 @@ public class UserHomeService {
             throw new IllegalStateException("No profile found for this user");
         }
 
-        Page<Post> posts = postRepository.findPublicByOwnerIdAndCategoryIdSubCategoryId(userId, PostStatusEnum.PUBLISHED.getId(), category.getId(),
-                subCategory!=null? subCategory.getId(): null, pageable);
+        Page<Post> posts = postRepository.findPublicByOwnerIdAndCategoryIdSubCategoryId(userId, PostStatusEnum.PUBLISHED.getId(), PostVisibilityEnum.PUBLIC.getId(),
+            category.getId(), subCategory!=null? subCategory.getId(): null, pageable);
         result.put("posts", mapToPostResponse(posts.getContent()));
 
         Page<Event> events = eventRepository.findByCategoryIdSubCategoryId(category.getId(),
