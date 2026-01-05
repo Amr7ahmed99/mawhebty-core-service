@@ -24,7 +24,7 @@ public class ResearcherProfile extends BaseEntity{
 //    private UserType userType;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     @JsonIgnore
     private TalentCategory category;
 

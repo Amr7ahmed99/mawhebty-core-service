@@ -474,46 +474,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-    # TODO: MOVE IT TO Dashboard.yml
-    post:
-      tags:
-        - Articles
-      summary: Create a new article
-      description: Create a new article with sections
-      operationId: createArticle
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateArticleRequest'
-      responses:
-        '201':
-          description: Article created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArticleResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /articles/{id}:
     get:
@@ -545,82 +505,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    put:
-      tags:
-        - Articles
-      summary: Update article
-      description: Update article details and sections
-      operationId: updateArticle
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateArticleRequest'
-      responses:
-        '200':
-          description: Article updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArticleResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Article not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    delete:
-      tags:
-        - Articles
-      summary: Delete article
-      description: Delete article by ID
-      operationId: deleteArticle
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Article deleted successfully
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Article not found
           content:
             application/json:
               schema:
@@ -663,6 +547,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Home APIs
+  /home/sections:
+    get:
+      tags:
+        - MawhebtyPlatformHomeSections
+      summary: Get home sections related to user category and subcategory
+      description: Get home sections posts, events, and articles
+      operationId: getHomeSections
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: per_section_items_count
+          in: query
+          description: Number of items for each section
+          required: false
+          schema:
+            type: number
+            default: 5
+      responses:
+        '200':
+          description: Home sections posts, events, and articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeSectionsData'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -821,7 +748,7 @@ components:
         id:
           type: integer
         owner:
-          $ref: '#/components/schemas/SavedItemOwner'
+          $ref: '#/components/schemas/PostOwner'
         title:
           type: string
         description:
@@ -879,7 +806,7 @@ components:
           type: string
           format: date-time
 
-    SavedItemOwner:
+    PostOwner:
       type: object
       properties:
         id:
@@ -1056,110 +983,6 @@ components:
           format: date-time
 
     # Articles Schemas
-    CreateArticleRequest:
-      type: object
-      required:
-        - title
-        - category_id
-        - sub_category_id
-      properties:
-        title:
-          type: string
-          minLength: 3
-          maxLength: 255
-        image_url:
-          type: string
-          
-        category_id:
-          type: integer
-        sub_category_id:
-          type: integer
-        status:
-          type: string
-          enum: [PUBLISHED, DRAFT, ARCHIVED]
-          default: DRAFT
-        tags:
-          type: string
-        published_at:
-          type: string
-          format: date-time
-        sections:
-          type: array
-          items:
-            $ref: '#/components/schemas/CreateArticleSection'
-
-    CreateArticleSection:
-      type: object
-      required:
-        - section_order
-        - content
-      properties:
-        section_order:
-          type: integer
-          minimum: 1
-        title:
-          type: string
-          maxLength: 500
-        content:
-          type: string
-        image_url:
-          type: string
-          
-        video_url:
-          type: string
-          
-        embed_code:
-          type: string
-
-    UpdateArticleRequest:
-      type: object
-      properties:
-        title:
-          type: string
-          minLength: 3
-          maxLength: 255
-        cover_image_url:
-          type: string
-          
-        category_id:
-          type: integer
-        sub_category_id:
-          type: integer
-        status:
-          type: string
-          enum: [PUBLISHED, DRAFT, ARCHIVED]
-        tags:
-          type: string
-        published_at:
-          type: string
-          format: date-time
-        sections:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpdateArticleSection'
-
-    UpdateArticleSection:
-      type: object
-      properties:
-        id:
-          type: integer
-        section_order:
-          type: integer
-          minimum: 1
-        title:
-          type: string
-          maxLength: 500
-        content:
-          type: string
-        image_url:
-          type: string
-          
-        video_url:
-          type: string
-          
-        embed_code:
-          type: string
-
     ArticleResponse:
       type: object
       properties:
@@ -1178,12 +1001,6 @@ components:
         tags:
           type: string
         published_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
           type: string
           format: date-time
         sections:
@@ -1241,9 +1058,74 @@ components:
           type: string
         embed_code:
           type: string
-        created_at:
+
+    HomeSectionsData:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostSection'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventSection'
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSection'
+
+    PostSection:
+      type: object
+      properties:
+        id:
+          type: number
+        owner:
+          $ref: '#/components/schemas/PostOwner'
+        title:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        date:
           type: string
           format: date-time
-        updated_at:
+
+    EventSection:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        location_coordinates:
+          type: string
+        image_url:
+          type: string
+        date:
           type: string
           format: date-time
+
+    ArticleSection:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        image_url:
+          type: string
+        category_name:
+          type: string
+        sub_category_name:
+          type: string

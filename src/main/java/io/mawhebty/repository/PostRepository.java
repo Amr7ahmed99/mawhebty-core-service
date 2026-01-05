@@ -2,6 +2,9 @@ package io.mawhebty.repository;
 
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -79,5 +82,22 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findByIdAndOwnerIdAndTypeId(@Param("id") Long id,
                                                @Param("ownerId") Long ownerId,
                                                @Param("typeId") Long typeId);
+
+    @Query("""
+        SELECT p
+        FROM Post p
+        WHERE p.ownerUser.id <> :ownerId
+          AND p.status.id = :publishedStatusId
+          AND p.visibility_id = 1
+          AND p.category.id = :categoryId
+          AND ( :subCategoryId IS NULL OR p.subCategory.id = :subCategoryId )
+    """)
+        Page<Post> findPublicByOwnerIdAndCategoryIdSubCategoryId(
+                @Param("ownerId") Long ownerId,
+                @Param("publishedStatusId") Integer publishedStatusId,
+                @Param("categoryId") Integer categoryId,
+                @Param("subCategoryId") Integer subCategoryId,
+                Pageable pageable
+        );
 
 }

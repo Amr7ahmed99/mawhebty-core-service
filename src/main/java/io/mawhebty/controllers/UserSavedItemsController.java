@@ -119,7 +119,7 @@ public class UserSavedItemsController extends AbstractMawhebtyPlatformController
             // Set owner
             @SuppressWarnings("unchecked")
             Map<String, Object> ownerData = (Map<String, Object>) postData.get("owner");
-            SavedItemOwnerResource ownerResource = new SavedItemOwnerResource();
+            PostOwnerResource ownerResource = new PostOwnerResource();
             ownerResource.setId(((Long) ownerData.get("id")).intValue());
             ownerResource.setFirstName((String) ownerData.get("first_name"));
             ownerResource.setLastName((String) ownerData.get("last_name"));

@@ -13,6 +13,8 @@ import java.util.List;
 @Table(name = "events",
         indexes = {
                 @Index(name = "idx_event_status", columnList = "status"),
+                @Index(name = "idx_event_category", columnList = "category_id"),
+                @Index(name = "idx_event_sub_category", columnList = "sub_category_id"),
                 @Index(name = "idx_event_date", columnList = "event_date"),
                 @Index(name = "idx_event_created", columnList = "createdAt")
         })

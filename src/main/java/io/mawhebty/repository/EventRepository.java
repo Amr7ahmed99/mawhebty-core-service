@@ -2,6 +2,7 @@ package io.mawhebty.repository;
 
 import io.mawhebty.enums.EventStatus;
 import io.mawhebty.models.Event;
+import io.mawhebty.models.Post;
 import io.mawhebty.models.TalentCategory;
 import io.mawhebty.models.TalentSubCategory;
 import org.springframework.data.domain.Page;
@@ -77,5 +78,18 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     List<Event> findTop5ByCategoryAndIdNot(
             TalentCategory category, Long id);
+
+    @Query("""
+        SELECT e
+        FROM Event e
+        WHERE e.status != 'CANCELLED'
+        AND e.category.id = :categoryId 
+        AND (:subCategoryId IS NULL OR e.subCategory.id = :subCategoryId)
+    """)
+    Page<Event> findByCategoryIdSubCategoryId(
+            @Param("categoryId") Integer categoryId,
+            @Param("subCategoryId") Integer subCategoryId,
+            Pageable pageable
+    );
 
 }

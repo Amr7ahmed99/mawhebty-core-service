@@ -131,7 +131,8 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
                path.startsWith("/api/v1/mawhebty-platform/profile") ||
                path.startsWith("/api/v1/mawhebty-platform/categories")||
                path.startsWith("/api/v1/mawhebty-platform/events")||
-               path.startsWith("/api/v1/mawhebty-platform/articles");
+               path.startsWith("/api/v1/mawhebty-platform/articles")||
+               path.startsWith("/api/v1/mawhebty-platform/home/sections");
     }
     
     private void sendErrorResponse(HttpServletResponse response, int status, String message) 

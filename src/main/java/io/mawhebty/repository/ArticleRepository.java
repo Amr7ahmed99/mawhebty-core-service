@@ -1,6 +1,8 @@
 package io.mawhebty.repository;
 
 import io.mawhebty.models.Article;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -60,4 +62,19 @@ public interface ArticleRepository extends JpaRepository<Article, Long> ,
     @Query(value = "SELECT * FROM articles WHERE id = :id AND status = 'PUBLISHED'",
             nativeQuery = true)
     Optional<Article> findPublishedById(@Param("id") Long id);
+
+    @Query("""
+        SELECT a
+        FROM Article a
+        WHERE a.status = 'PUBLISHED'
+        AND a.category.id = :categoryId
+        AND (:subCategoryId IS NULL OR a.subCategory.id = :subCategoryId)
+    """)
+    Page<Article> findByCategoryIdSubCategoryId(
+            @Param("categoryId") Integer categoryId,
+            @Param("subCategoryId") Integer subCategoryId,
+            Pageable pageable
+    );
+
+
 }

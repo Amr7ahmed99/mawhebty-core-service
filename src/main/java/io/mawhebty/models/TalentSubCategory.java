@@ -68,4 +68,9 @@ public class TalentSubCategory extends BaseEntity {
     @JsonIgnore
     @Builder.Default
     List<Event> events= new ArrayList<>();
+
+    @OneToMany(mappedBy = "subCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    List<Post> posts= new ArrayList<>();
 }

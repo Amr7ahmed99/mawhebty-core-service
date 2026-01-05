@@ -1,8 +1,8 @@
 package io.mawhebty.controllers.internalServices;
 
+import io.mawhebty.api.v1.mawhebty.dashboard.AbstractMawhebtyDashboardController;
 import io.mawhebty.dtos.requests.InternalServices.ModerateUserRequestDto;
 import io.mawhebty.services.ContentModerationService;
-import io.mawhebty.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/v1/internal-services/core")
 //("IntegrationRoutes : Routes For Integration between schedular and this core-service")
-public class ContentModerationController {
+public class ContentModerationController extends AbstractMawhebtyDashboardController {
 
     private final ContentModerationService service;
 

@@ -1,5 +1,6 @@
 package io.mawhebty.controllers.internalServices;
 
+import io.mawhebty.api.v1.mawhebty.dashboard.AbstractMawhebtyDashboardController;
 import io.mawhebty.dtos.requests.InternalServices.CreateFormKeyRequest;
 import io.mawhebty.dtos.requests.InternalServices.CreateTalentCategoryRequest;
 import io.mawhebty.dtos.requests.InternalServices.CreateTalentSubCategoryRequest;
@@ -11,8 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/v1/internal-services/core")
-public class TalentCategoryController {
+public class TalentCategoryController extends AbstractMawhebtyDashboardController {
 
     private final TalentCategoryService talentCategoryService;
 

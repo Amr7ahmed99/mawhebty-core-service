@@ -131,6 +131,124 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /articles:
+    post:
+      tags:
+        - ArticlesDashboard
+      summary: Create a new article
+      description: Create a new article with sections
+      operationId: createArticle
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Article created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /articles/{id}:
+    put:
+      tags:
+        - ArticlesDashboard
+      summary: Update article
+      description: Update article details and sections
+      operationId: updateArticle
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateArticleRequest'
+      responses:
+        '200':
+          description: Article updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - ArticlesDashboard
+      summary: Delete article
+      description: Delete article by ID
+      operationId: deleteArticle
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Article deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -304,3 +422,147 @@ components:
         tags:
           type: string
 
+    # Articles Schemas
+    CreateArticleRequest:
+      type: object
+      required:
+        - title
+        - category_id
+        - sub_category_id
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        image_url:
+          type: string
+
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+        status:
+          type: string
+          enum: [ PUBLISHED, DRAFT, ARCHIVED ]
+          default: DRAFT
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateArticleSection'
+
+    CreateArticleSection:
+      type: object
+      required:
+        - section_order
+        - content
+      properties:
+        section_order:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+        image_url:
+          type: string
+
+        video_url:
+          type: string
+
+        embed_code:
+          type: string
+
+    ArticleResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        cover_image_url:
+          type: string
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        status:
+          type: string
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSectionResponse'
+
+    ArticleSectionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        section_order:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+        video_url:
+          type: string
+        embed_code:
+          type: string
+
+    UpdateArticleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        cover_image_url:
+          type: string
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+        status:
+          type: string
+          enum: [ PUBLISHED, DELETED ]
+        tags:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateArticleSection'
+
+    UpdateArticleSection:
+      type: object
+      properties:
+        id:
+          type: integer
+        section_order:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 500
+        content:
+          type: string
+        image_url:
+          type: string
+        video_url:
+          type: string
+        embed_code:
+          type: string
