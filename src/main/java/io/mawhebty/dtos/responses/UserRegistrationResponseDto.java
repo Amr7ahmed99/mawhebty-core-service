@@ -34,6 +34,8 @@ public class UserRegistrationResponseDto {
     private Integer userRole;
     @JsonProperty("user_type")
     private Integer userType;// Individual/Company
+    @JsonProperty("short_bio")
+    private String shortBio;
     @JsonProperty("image_url")
     private String imageUrl;
     @JsonProperty("company_name")

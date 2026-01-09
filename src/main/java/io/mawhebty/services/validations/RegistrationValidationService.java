@@ -29,13 +29,13 @@ public class RegistrationValidationService {
     public void validateTalentRegistration(DraftRegistrationRequest request, List<TalentCategoryFormKeys> reqFields, TalentCategory talentCategory) {
 
         List<TalentCategoryFormKeys> talentCategoryFormKeys= talentCategoryFormKeysRepository.findAllByTalentCategory(talentCategory);
-        List<TalentCategoryFormKeys> requeriedFields =  talentCategoryFormKeys.stream().filter(fk-> fk.getIsRequired() == true).toList();
+        List<TalentCategoryFormKeys> requiredFields =  talentCategoryFormKeys.stream().filter(fk-> fk.getIsRequired() == true).toList();
 
-        if(!requeriedFields.isEmpty() &&
+        if(!requiredFields.isEmpty() &&
                 (request.getTalentCategoryForm() == null || request.getTalentCategoryForm().isEmpty() || request.getTalentCategoryForm().isBlank())){
             throw new BadDataException(
                     messageService.getMessage("category.form.data.missing",
-                            new Object[]{requeriedFields})
+                            new Object[]{requiredFields})
             );
         }
 

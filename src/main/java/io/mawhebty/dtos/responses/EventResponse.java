@@ -14,8 +14,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class EventResponse {
     private Long id;
-    private String title;
-    private String description;
+    private String titleEn;
+    private String titleAr;
+    private String descriptionEn;
+    private String descriptionAr;
     private LocalDateTime eventDate;
     private LocalDateTime endDate;
     private String location;

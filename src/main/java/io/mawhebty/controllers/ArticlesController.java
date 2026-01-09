@@ -2,9 +2,7 @@ package io.mawhebty.controllers;
 
 import io.mawhebty.api.v1.mawhebty.platform.AbstractMawhebtyPlatformController;
 import io.mawhebty.api.v1.mawhebtyPlatform.ArticlesApi;
-import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleListResponseResource;
-import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleResponseResource;
-import io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSummaryResource;
+import io.mawhebty.api.v1.resources.mawhebtyPlatform.*;
 import io.mawhebty.dtos.responses.ArticleListResponse;
 import io.mawhebty.dtos.responses.ArticleSummaryResponse;
 import io.mawhebty.services.ArticleService;
@@ -12,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,7 +23,7 @@ public class ArticlesController extends AbstractMawhebtyPlatformController
     private final ArticleService articleService;
 
     @Override
-    public ResponseEntity<ArticleListResponseResource> getArticles(
+    public ResponseEntity<PaginatedListResponseResource> getArticles(
             Integer categoryId,
             Integer subCategoryId,
             String search,
@@ -55,12 +52,13 @@ public class ArticlesController extends AbstractMawhebtyPlatformController
                 .collect(Collectors.toList());
 
         // Map to Resource for API response
-        ArticleListResponseResource resource = new ArticleListResponseResource();
+        PaginatedListResponseResource resource = new PaginatedListResponseResource();
         resource.setTotalItems(BigDecimal.valueOf(response.getTotalItems()));
         resource.setCurrentPage(response.getCurrentPage());
         resource.setPerPage(response.getPerPage());
         resource.setTotalPages(response.getTotalPages());
-        resource.setArticles(articleResources);
+        resource.setData(articleResources);
+
         return ResponseEntity.ok(resource);
     }
 

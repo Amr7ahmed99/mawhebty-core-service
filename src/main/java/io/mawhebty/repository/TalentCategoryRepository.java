@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface TalentCategoryRepository extends JpaRepository<TalentCategory, Integer> {
     Optional<TalentCategory> findByNameEn(String nameEn);
     Optional<TalentCategory> findByNameAr(String nameAr);
-    boolean existsByNameArAndNameEn(String nameEn, String nameAr);
+    boolean existsByNameArOrNameEn(String nameEn, String nameAr);
     Optional<TalentCategory> findByPartnerId(Integer partnerId);
 
 }

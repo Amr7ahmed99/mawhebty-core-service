@@ -12,7 +12,6 @@ import io.mawhebty.enums.EventStatus;
 import io.mawhebty.enums.EventType;
 import io.mawhebty.exceptions.ResourceNotFoundException;
 import io.mawhebty.services.EventService;
-import io.mawhebty.services.auth.CurrentUserService;
 import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -97,8 +96,10 @@ public class EventsController extends AbstractMawhebtyDashboardController
     private EventResponseResource mapToEventResponseResource(EventResponse response) {
         EventResponseResource resource = new EventResponseResource();
         resource.setId(response.getId().intValue());
-        resource.setTitle(response.getTitle());
-        resource.setDescription(response.getDescription());
+        resource.setTitleEn(response.getTitleEn());
+        resource.setTitleAr(response.getTitleAr());
+        resource.setDescriptionEn(response.getDescriptionEn());
+        resource.setDescriptionAr(response.getDescriptionAr());
         resource.setEventDate(response.getEventDate());
         resource.setEndDate(response.getEndDate());
         resource.setLocation(response.getLocation());
@@ -121,8 +122,10 @@ public class EventsController extends AbstractMawhebtyDashboardController
 
     private CreateEventRequest mapToCreateEventRequest(CreateEventRequestResource resource) {
         return CreateEventRequest.builder()
-                .title(resource.getTitle())
-                .description(resource.getDescription())
+                .titleEn(resource.getTitleEn())
+                .titleAr(resource.getTitleAr())
+                .descriptionEn(resource.getDescriptionEn())
+                .descriptionAr(resource.getDescriptionAr())
                 .eventDate(resource.getEventDate())
                 .endDate(resource.getEndDate())
                 .location(resource.getLocation())
@@ -144,8 +147,10 @@ public class EventsController extends AbstractMawhebtyDashboardController
 
     private UpdateEventRequest mapToUpdateEventRequest(UpdateEventRequestResource resource) {
         return UpdateEventRequest.builder()
-                .title(resource.getTitle())
-                .description(resource.getDescription())
+                .titleEn(resource.getTitleEn())
+                .titleAr(resource.getTitleAr())
+                .descriptionEn(resource.getDescriptionEn())
+                .descriptionAr(resource.getDescriptionAr())
                 .eventDate(resource.getEventDate())
                 .endDate(resource.getEndDate())
                 .location(resource.getLocation())

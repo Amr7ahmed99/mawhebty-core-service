@@ -129,7 +129,6 @@ public class RegistrationService {
 
         // 2. custom validations based on user role
         List<TalentCategoryFormKeys> requestCategoryFormData = new ArrayList<>();
-        boolean isIndividualResearcher = false;
         if (role.getName().equals(UserRoleEnum.TALENT)) {
             validationService.validateTalentRegistration(request, requestCategoryFormData, talentCategory);
         }
@@ -149,7 +148,7 @@ public class RegistrationService {
 
             user.setUserType(userType);
 
-            isIndividualResearcher = userType.getType().equals(UserTypeEnum.INDIVIDUAL);
+            boolean isIndividualResearcher = userType.getType().equals(UserTypeEnum.INDIVIDUAL);
 
             validationService.validateResearcherRegistration(request, isIndividualResearcher);
 
@@ -374,6 +373,7 @@ public class RegistrationService {
         if (profile instanceof TalentProfile) {
             userRegistrationResponseDto.setFirstName(((TalentProfile) profile).getFirstName());
             userRegistrationResponseDto.setLastName(((TalentProfile) profile).getLastName());
+            userRegistrationResponseDto.setShortBio(((TalentProfile) profile).getShortBio());
             userRegistrationResponseDto.setImageUrl(((TalentProfile) profile).getProfilePicture());
         }else{
             if(profile instanceof IndividualResearcherProfile){
@@ -385,6 +385,7 @@ public class RegistrationService {
                 userRegistrationResponseDto.setCommercialRegNo(((CompanyResearcherProfile) profile).getCommercialRegNo());
             }
             userRegistrationResponseDto.setImageUrl(((ResearcherProfile) profile).getProfilePicture());
+            userRegistrationResponseDto.setShortBio(((ResearcherProfile) profile).getShortBio());
         }
 
         return userRegistrationResponseDto;

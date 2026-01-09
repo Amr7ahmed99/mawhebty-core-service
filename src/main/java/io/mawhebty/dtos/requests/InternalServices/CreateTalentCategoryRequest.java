@@ -14,6 +14,7 @@ public class CreateTalentCategoryRequest {
     private String nameEn;
     @NotBlank
     private String nameAr;
+    private String imageUrl;
     @NotNull
     @Min(1)
     private Integer participationTypeId;// project_idea, personal_talent, patent

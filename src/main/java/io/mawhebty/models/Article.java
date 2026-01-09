@@ -28,8 +28,11 @@ public class Article extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String title;
+    @Column(name = "title_en", nullable = false)
+    private String titleEn;
+
+    @Column(name = "title_ar", nullable = false)
+    private String titleAr;
 
     @Column(name = "cover_image_url")
     private String coverImageUrl;

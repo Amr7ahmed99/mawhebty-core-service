@@ -17,6 +17,8 @@ import io.mawhebty.repository.specification.EventSpecification;
 import io.mawhebty.services.auth.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -98,7 +101,7 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
 
         // Get 5 related events based on category and subCategory, excluding the main event
-        List<Event> relatedEvents = eventRepository.findTop5ByCategoryAndIdNot(
+        List<Event> relatedEvents = eventRepository.findTop5ByCategoryAndIdNotOrderByEventDateAsc(
                 event.getCategory(),event.getId());
 
         // Map main event
@@ -116,10 +119,11 @@ public class EventService {
 
     // Mapper for EventSummary
     private EventSummaryResource mapToEventSummary(Event event) {
+        Locale locale = LocaleContextHolder.getLocale();
         EventSummaryResource summary = new EventSummaryResource();
         summary.setId(BigDecimal.valueOf(event.getId()));
-        summary.setTitle(event.getTitle());
-        summary.setDescription(event.getDescription());
+        summary.setTitle("en".equals(locale.getLanguage()) ? event.getTitleEn() : event.getTitleAr());
+        summary.setDescription("en".equals(locale.getLanguage()) ? event.getDescriptionEn() : event.getDescriptionAr());
         summary.setLocation(event.getLocation());
         summary.setImageUrl(event.getCoverImageUrl());
         summary.setDate(event.getEventDate());
@@ -151,8 +155,10 @@ public class EventService {
 
         // Create event entity
         Event event = Event.builder()
-                .title(request.getTitle())
-                .description(request.getDescription())
+                .titleEn(request.getTitleEn())
+                .titleAr(request.getTitleAr())
+                .descriptionEn(request.getDescriptionEn())
+                .descriptionAr(request.getDescriptionAr())
                 .eventDate(request.getEventDate())
                 .endDate(request.getEndDate())
                 .location(request.getLocation())
@@ -184,11 +190,17 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
 
         // Update fields if provided
-        if (request.getTitle() != null) {
-            event.setTitle(request.getTitle());
+        if (request.getTitleEn() != null) {
+            event.setTitleEn(request.getTitleEn());
         }
-        if (request.getDescription() != null) {
-            event.setDescription(request.getDescription());
+        if (request.getTitleAr() != null) {
+            event.setTitleAr(request.getTitleAr());
+        }
+        if (request.getDescriptionEn() != null) {
+            event.setDescriptionEn(request.getDescriptionEn());
+        }
+        if (request.getDescriptionAr() != null) {
+            event.setDescriptionAr(request.getDescriptionAr());
         }
         if (request.getEventDate() != null) {
             if (request.getEventDate().isBefore(LocalDateTime.now())) {
@@ -312,8 +324,10 @@ public class EventService {
     private EventResponse mapToEventResponse(Event event) {
         return EventResponse.builder()
                 .id(event.getId())
-                .title(event.getTitle())
-                .description(event.getDescription())
+                .titleEn(event.getTitleEn())
+                .titleAr(event.getTitleAr())
+                .descriptionEn(event.getDescriptionEn())
+                .descriptionAr(event.getDescriptionAr())
                 .eventDate(event.getEventDate())
                 .endDate(event.getEndDate())
                 .location(event.getLocation())
@@ -334,10 +348,11 @@ public class EventService {
     }
 
     private EventListItemResponse mapToEventListItemResponse(Event event) {
+        Locale locale = LocaleContextHolder.getLocale();
         return EventListItemResponse.builder()
                 .id(event.getId())
-                .title(event.getTitle())
-                .description(event.getDescription())
+                .title("en".equals(locale.getLanguage()) ? event.getTitleEn() : event.getTitleAr())
+                .description("en".equals(locale.getLanguage()) ? event.getDescriptionEn() : event.getDescriptionAr())
                 .date(event.getEventDate())
                 .location(event.getLocation())
                 .coverImageUrl(event.getCoverImageUrl())
@@ -345,10 +360,11 @@ public class EventService {
     }
 
     private EventWithRelatedResponse mapToEventWithRelatedResponse(Event event) {
+        Locale locale = LocaleContextHolder.getLocale();
         return EventWithRelatedResponse.builder()
                 .id(event.getId())
-                .title(event.getTitle())
-                .description(event.getDescription())
+                .title("en".equals(locale.getLanguage()) ? event.getTitleEn() : event.getTitleAr())
+                .description("en".equals(locale.getLanguage()) ? event.getDescriptionEn() : event.getDescriptionAr())
                 .date(event.getEventDate())
                 .endDate(event.getEndDate())
                 .location(event.getLocation())

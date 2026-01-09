@@ -34,6 +34,10 @@ public class TalentCategory extends BaseEntity {
     @ToString.Include
     private Integer partnerId;
 
+    @Column(name = "image_url")
+    @ToString.Include
+    private String imageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "participation_type_id", nullable = false)
     private ParticipationType participationType;

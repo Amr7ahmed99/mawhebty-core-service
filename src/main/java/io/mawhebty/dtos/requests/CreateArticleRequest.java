@@ -9,7 +9,8 @@ import java.util.List;
 @Data
 public class CreateArticleRequest {
 
-    private String title;
+    private String titleEn;
+    private String titleAr;
     private String imageUrl;
 
     private Integer categoryId;

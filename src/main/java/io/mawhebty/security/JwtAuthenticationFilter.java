@@ -33,11 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     // Paths that don't require authentication
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/internal-services/core/", // actually keycloakFilter will handle it
-            "/api/v1/users/",
-            "/api/auth/",
+            "/api/v1/users",
+            "/api/v1/auth",
             "/swagger-ui/",
             "/v3/api-docs",
-            "/actuator/health"
+            "/actuator/health",
+            "/api/v1/categories",
+            "/api/v1/talent",
+            "/api/v1/sub-categories/"
     );
 
     @Override

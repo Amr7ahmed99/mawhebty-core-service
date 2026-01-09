@@ -17,10 +17,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CreateEventRequest {
     @NotBlank(message = "Title is required")
-    @Size(min = 3, max = 255, message = "Title must be between 3 and 255 characters")
-    private String title;
+    private String titleEn;
+    @NotBlank(message = "Title is required")
+    private String titleAr;
 
-    private String description;
+    
+    @Size(min = 10, message = "Description must be at least 10 characters")
+    private String descriptionEn;
+    @Size(min = 10, message = "Description must be at least 10 characters")
+    private String descriptionAr;
 
     @NotNull(message = "Event date is required")
     @Future(message = "Event date must be in the future")

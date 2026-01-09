@@ -9,7 +9,6 @@ import io.mawhebty.services.UserHomeService;
 import io.mawhebty.services.auth.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,7 +30,7 @@ public class UserHomeController extends AbstractMawhebtyPlatformController
     private final CurrentUserService currentUserService;
 
     @Override
-    public ResponseEntity<HomeSectionsDataResource> getHomeSections(BigDecimal perSectionItemsCount) {
+    public ResponseEntity<HomeSectionsDataResource> getHomeSections(BigDecimal perSectionItemsCount, String search) {
         try {
             // Get current authenticated user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -40,7 +39,8 @@ public class UserHomeController extends AbstractMawhebtyPlatformController
             // Get saved items based on filter
             Map<String, Object> homeSectionsData= userHomeService.getHomeSections(
                     currentUser.getId(),
-                    this.pageOf(0, perSectionItemsCount.intValue(), Sort.by("id").descending())
+                    this.pageOf(0, perSectionItemsCount.intValue(), Sort.by("id").descending()),
+                    search
             );
 
             // Build response
@@ -95,16 +95,19 @@ public class UserHomeController extends AbstractMawhebtyPlatformController
             @SuppressWarnings("unchecked")
             Map<String, Object> ownerData = (Map<String, Object>) postData.get("owner");
             PostOwnerResource ownerResource = new PostOwnerResource();
-            ownerResource.setId(((Long) ownerData.get("id")).intValue());
+            ownerResource.setId(BigDecimal.valueOf((Long) ownerData.get("id")));
             ownerResource.setFirstName((String) ownerData.get("first_name"));
             ownerResource.setLastName((String) ownerData.get("last_name"));
             ownerResource.setImageUrl((String) ownerData.get("image_url"));
             postResource.setOwner(ownerResource);
 
             postResource.setTitle((String) postData.get("title"));
-            postResource.setDescription((String) postData.get("description"));
+            postResource.setCaption((String) postData.get("caption"));
             postResource.setImageUrl((String) postData.get("image_url"));
+            postResource.setCategoryName((String) postData.get("category_name"));
+            postResource.setSubCategoryName((String) postData.get("sub_category_name"));
             postResource.setDate(LocalDateTime.parse((String) postData.get("date")));
+            postResource.setIsSaved((Boolean) postData.get("is_saved"));
             postSectionResource.add(postResource);
         }
 
@@ -136,7 +139,6 @@ public class UserHomeController extends AbstractMawhebtyPlatformController
             ArticleSectionResource articleResource = new ArticleSectionResource();
             articleResource.setId(BigDecimal.valueOf((Long) articleData.get("id")));
             articleResource.setTitle((String) articleData.get("title"));
-            articleResource.setDescription((String) articleData.get("description"));
             articleResource.setImageUrl((String) articleData.get("image_url"));
             articleResource.setCategoryName((String) articleData.get("category_name"));
             articleResource.setSubCategoryName((String) articleData.get("sub_category_name"));

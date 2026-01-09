@@ -222,6 +222,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /profile/user/posts:
+    get:
+      tags:
+        - MawhebtyPlatformUserProfile
+      summary: Get user profile posts
+      description: Get user profile posts
+      operationId: getUserProfilePosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: List of user posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # Events CRUD APIs
   /events:
     get:
@@ -301,7 +352,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventListResponse'
+                $ref: '#/components/schemas/PaginatedListResponse'
         '400':
           description: Bad request
           content:
@@ -454,7 +505,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ArticleListResponse'
+                $ref: '#/components/schemas/PaginatedListResponse'
         '400':
           description: Bad request
           content:
@@ -565,6 +616,12 @@ paths:
           schema:
             type: number
             default: 5
+        - name: search
+          in: query
+          description: Search in title, description, tags
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Home sections posts, events, and articles
@@ -590,6 +647,132 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+
+  /posts:
+    get:
+      tags:
+        - Posts
+      summary: Get list of posts
+      description: Get published posts with public visibility (PUBLISHED status and PUBLIC visibility only)
+      operationId: getPosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: query
+          description: Filter by category ID
+          required: false
+          schema:
+            type: integer
+        - name: sub_category_id
+          in: query
+          description: Filter by sub-category ID
+          required: false
+          schema:
+            type: integer
+        - name: owner_id
+          in: query
+          description: Filter by post owner user ID
+          required: false
+          schema:
+            type: number
+        - name: type_id
+          in: query
+          description: Filter by post type ID
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Search in title and caption
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+        - name: sort_by
+          in: query
+          description: Sort by created date (created_desc, created_asc)
+          required: false
+          schema:
+            type: string
+            enum: [created_desc, created_asc]
+            default: created_desc
+      responses:
+        '200':
+          description: List of published posts with public visibility
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{id}:
+    get:
+      tags:
+        - Posts
+      summary: Get post by ID
+      description: Get published post with public visibility by ID (PUBLISHED status and PUBLIC visibility only)
+      operationId: getPostById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post with related posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostWithRelatedResponse'
+        '404':
+          description: Post not found or not accessible (not published or not public)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -730,17 +913,12 @@ components:
       type: object
       properties:
         posts:
-          type: array
-          items:
-            $ref: '#/components/schemas/SavedPost'
+          $ref: '#/components/schemas/PaginatedListResponse'
         events:
-          type: array
-          items:
-            $ref: '#/components/schemas/SavedEvent'
+          $ref: '#/components/schemas/PaginatedListResponse'
         articles:
-          type: array
-          items:
-            $ref: '#/components/schemas/SavedArticle'
+          $ref: '#/components/schemas/PaginatedListResponse'
+
 
     SavedPost:
       type: object
@@ -751,7 +929,7 @@ components:
           $ref: '#/components/schemas/PostOwner'
         title:
           type: string
-        description:
+        caption:
           type: string
         image_url:
           type: string
@@ -761,6 +939,14 @@ components:
         saved_at:
           type: string
           format: date-time
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        is_saved:
+          type: boolean
+        likes_count:
+          type: integer
 
     SavedEvent:
       type: object
@@ -810,7 +996,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: number
         first_name:
           type: string
         last_name:
@@ -1023,6 +1209,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArticleSummary'
+      
+    PaginatedListResponse:
+      type: object
+      properties:
+        total_items:
+          type: number
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        data:
+          type: object
+          description: "Generic data object to hold list items"
+
 
     ArticleSummary:
       type: object
@@ -1084,13 +1286,21 @@ components:
           $ref: '#/components/schemas/PostOwner'
         title:
           type: string
-        description:
+        caption:
           type: string
         image_url:
           type: string
         date:
           type: string
           format: date-time
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        is_saved:
+          type: boolean
+        likes_count:
+          type: integer
 
     EventSection:
       type: object
@@ -1118,8 +1328,6 @@ components:
           type: number
         title:
           type: string
-        description:
-          type: string
         date:
           type: string
           format: date-time
@@ -1129,3 +1337,108 @@ components:
           type: string
         sub_category_name:
           type: string
+    
+    # Posts Schemas
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: number
+        owner:
+          $ref: '#/components/schemas/PostOwner'
+        type:
+          type: string
+        title:
+          type: string
+        caption:
+          type: string
+        media_url:
+          type: string
+        duration_seconds:
+          type: integer
+        category:
+          $ref: '#/components/schemas/category'
+        sub_category:
+          $ref: '#/components/schemas/subcategory'
+        date:
+          type: string
+          format: date-time
+        is_saved:
+          type: boolean
+        likes_count:
+          type: integer
+
+    PostListItem:
+      type: object
+      properties:
+        id:
+          type: number
+        owner:
+          $ref: '#/components/schemas/PostOwner'
+        title:
+          type: string
+        caption:
+          type: string
+        media_url:
+          type: string
+        duration_seconds:
+          type: integer
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        is_saved:
+          type: boolean
+        likes_count:
+          type: integer       
+
+    PostListResponse:
+      type: object
+      properties:
+        total_items:
+          type: number
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostListItem'
+
+    PostWithRelatedResponse:
+      type: object
+      properties:
+        id:
+          type: number
+        owner:
+          $ref: '#/components/schemas/PostOwner'
+        title:
+          type: string
+        caption:
+          type: string
+        media_url:
+          type: string
+        duration_seconds:
+          type: integer
+        category_name:
+          type: string
+        sub_category_name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        is_saved:
+          type: boolean
+        likes_count:
+          type: integer
+        related_posts:
+          type: array
+          description: "Up to 5 related posts based on category and sub-category"
+          items:
+            $ref: '#/components/schemas/PostListItem'

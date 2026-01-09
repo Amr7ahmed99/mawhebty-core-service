@@ -1,5 +1,6 @@
 package io.mawhebty.repository;
 
+import io.mawhebty.enums.ArticleStatusEnum;
 import io.mawhebty.models.Article;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,68 +14,92 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ArticleRepository extends JpaRepository<Article, Long> ,
-        JpaSpecificationExecutor<Article> {
+public interface ArticleRepository
+        extends JpaRepository<Article, Long>, JpaSpecificationExecutor<Article> {
 
-    // Get published articles with pagination
-    @Query(value = "SELECT * FROM articles WHERE status = 'PUBLISHED' " +
-            "AND published_at <= :now " +
-            "ORDER BY published_at DESC LIMIT :limit OFFSET :offset",
-            nativeQuery = true)
-    List<Article> findPublishedArticles(@Param("now") LocalDateTime now,
-                                        @Param("limit") int limit,
-                                        @Param("offset") int offset);
-
-    // Get published articles by category
-    @Query(value = "SELECT * FROM articles WHERE category_id = :category_id " +
-            "AND status = 'PUBLISHED' " +
-            "AND published_at <= :now " +
-            "ORDER BY published_at DESC LIMIT :limit OFFSET :offset",
-            nativeQuery = true)
-    List<Article> findPublishedByCategory(@Param("category") Long category_id,
-                                          @Param("now") LocalDateTime now,
-                                          @Param("limit") int limit,
-                                          @Param("offset") int offset);
-
-    // Search articles
-    @Query(value = "SELECT * FROM articles WHERE " +
-            "(LOWER(title) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR LOWER(meta_description) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR LOWER(tags) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-            "AND status = 'PUBLISHED' " +
-            "ORDER BY published_at DESC LIMIT :limit OFFSET :offset",
-            nativeQuery = true)
-    List<Article> searchArticles(@Param("query") String query,
-                                 @Param("limit") int limit,
-                                 @Param("offset") int offset);
-
-    // Count queries
-    @Query(value = "SELECT COUNT(*) FROM articles WHERE status = 'PUBLISHED'",
-            nativeQuery = true)
-    Long countPublished();
-
-    // Find articles by IDs
-    @Query(value = "SELECT * FROM articles WHERE id IN :ids",
-            nativeQuery = true)
-    List<Article> findByIds(@Param("ids") List<Long> ids);
-
-    // Find published article by ID
-    @Query(value = "SELECT * FROM articles WHERE id = :id AND status = 'PUBLISHED'",
-            nativeQuery = true)
-    Optional<Article> findPublishedById(@Param("id") Long id);
+    /* ===================== PUBLISHED ===================== */
 
     @Query("""
-        SELECT a
-        FROM Article a
-        WHERE a.status = 'PUBLISHED'
-        AND a.category.id = :categoryId
-        AND (:subCategoryId IS NULL OR a.subCategory.id = :subCategoryId)
+        SELECT a FROM Article a
+        WHERE a.status = :published
+        AND a.publishedAt <= :now
+        ORDER BY a.publishedAt DESC
     """)
-    Page<Article> findByCategoryIdSubCategoryId(
-            @Param("categoryId") Integer categoryId,
-            @Param("subCategoryId") Integer subCategoryId,
+    Page<Article> findPublishedArticles(
+            @Param("published") ArticleStatusEnum published,
+            @Param("now") LocalDateTime now,
             Pageable pageable
     );
 
 
+    /* ===================== CATEGORY ===================== */
+
+    @Query("""
+        SELECT a FROM Article a
+        WHERE a.status = :published
+        AND a.publishedAt <= :now
+        AND a.category.id = :categoryId
+        ORDER BY a.publishedAt DESC
+    """)
+    Page<Article> findPublishedByCategory(
+            @Param("categoryId") Long categoryId,
+            @Param("published") ArticleStatusEnum published,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
+
+
+    /* ===================== SEARCH ===================== */
+
+    @Query("""
+        SELECT a FROM Article a
+        WHERE a.status = :published
+        AND (
+            LOWER(a.titleEn) LIKE LOWER(CONCAT('%', :query, '%'))
+            OR LOWER(a.titleAr) LIKE LOWER(CONCAT('%', :query, '%'))
+            OR LOWER(a.tags) LIKE LOWER(CONCAT('%', :query, '%'))
+        )
+        ORDER BY a.publishedAt DESC
+    """)
+    Page<Article> searchArticles(
+            @Param("query") String query,
+            @Param("published") ArticleStatusEnum published,
+            Pageable pageable
+    );
+
+
+    /* ===================== COUNTS ===================== */
+
+    long countByStatus(ArticleStatusEnum status);
+
+
+    /* ===================== IDS ===================== */
+
+    List<Article> findByIdIn(List<Long> ids);
+
+
+    /* ===================== SINGLE ===================== */
+
+    Optional<Article> findByIdAndStatus(Long id, ArticleStatusEnum status);
+
+
+    /* ===================== CATEGORY + SUB ===================== */
+
+    @Query("""
+        SELECT a FROM Article a
+        WHERE a.status = :published
+        AND a.category.id = :categoryId
+        AND (:subCategoryId IS NULL OR a.subCategory.id = :subCategoryId)
+        AND ( :search IS NULL OR LOWER(a.titleEn) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(a.titleAr) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(a.tags) LIKE LOWER(CONCAT('%', :search, '%')) )
+        ORDER BY a.publishedAt DESC
+    """)
+    Page<Article> findByCategoryAndSubCategory(
+            @Param("categoryId") Integer categoryId,
+            @Param("subCategoryId") Integer subCategoryId,
+            @Param("published") ArticleStatusEnum published,
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

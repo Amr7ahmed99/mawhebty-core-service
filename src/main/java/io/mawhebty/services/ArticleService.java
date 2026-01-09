@@ -44,8 +44,7 @@ public class ArticleService {
             String search,
             Integer page,
             Integer perPage,
-            String sortBy
-    ) {
+            String sortBy) {
 
         Sort sort = Sort.by("publishedAt").descending();
         if ("date_asc".equals(sortBy)) {
@@ -57,8 +56,7 @@ public class ArticleService {
         Specification<Article> spec = Specification.allOf(
                 ArticleSpecification.hasCategory(categoryId),
                 ArticleSpecification.hasSubCategory(subCategoryId),
-                ArticleSpecification.search(search)
-        );
+                ArticleSpecification.search(search));
 
         Page<Article> pageResult = articleRepository.findAll(spec, pageable);
 
@@ -71,8 +69,7 @@ public class ArticleService {
                         pageResult.getContent()
                                 .stream()
                                 .map(this::mapToListItem)
-                                .toList()
-                )
+                                .toList())
                 .build();
     }
 
@@ -80,12 +77,12 @@ public class ArticleService {
         Locale locale = LocaleContextHolder.getLocale();
         return ArticleSummaryResponse.builder()
                 .id(article.getId())
-                .title(article.getTitle())
+                .title("en".equals(locale.getLanguage()) ? article.getTitleEn() : article.getTitleAr())
                 .imageUrl(article.getCoverImageUrl())
-                .categoryName("en".equals(locale.getLanguage())?
-                        article.getCategory().getNameEn(): article.getCategory().getNameAr())
-                .subCategoryName("en".equals(locale.getLanguage())?
-                        article.getSubCategory().getNameEn(): article.getSubCategory().getNameAr())
+                .categoryName("en".equals(locale.getLanguage()) ? article.getCategory().getNameEn()
+                        : article.getCategory().getNameAr())
+                .subCategoryName("en".equals(locale.getLanguage()) ? article.getSubCategory().getNameEn()
+                        : article.getSubCategory().getNameAr())
                 .publishedAt(article.getPublishedAt())
                 .build();
     }
@@ -99,13 +96,13 @@ public class ArticleService {
                 .orElseThrow(() -> new IllegalArgumentException("Sub category not found"));
 
         Article article = Article.builder()
-                .title(request.getTitle())
+                .titleEn(request.getTitleEn())
+                .titleAr(request.getTitleAr())
                 .coverImageUrl(request.getImageUrl())
                 .category(category)
                 .subCategory(subCategory)
                 .status(ArticleStatusEnum.valueOf(
-                        request.getStatus() != null ? request.getStatus().name() : ArticleStatusEnum.PUBLISHED.name()
-                ))
+                        request.getStatus() != null ? request.getStatus().name() : ArticleStatusEnum.PUBLISHED.name()))
                 .tags(request.getTags())
                 .publishedAt(request.getPublishedAt() != null
                         ? request.getPublishedAt()
@@ -118,8 +115,10 @@ public class ArticleService {
                     .forEach(sectionRequest -> {
                         ArticleSection section = ArticleSection.builder()
                                 .sectionOrder(sectionRequest.getSectionOrder())
-                                .title(sectionRequest.getTitle())
-                                .content(sectionRequest.getContent())
+                                .titleEn(sectionRequest.getTitleEn())
+                                .titleAr(sectionRequest.getTitleAr())
+                                .contentEn(sectionRequest.getContentEn())
+                                .contentAr(sectionRequest.getContentAr())
                                 .imageUrl(sectionRequest.getImageUrl())
                                 .videoUrl(sectionRequest.getVideoUrl())
                                 .embedCode(sectionRequest.getEmbedCode())
@@ -135,15 +134,18 @@ public class ArticleService {
 
     public ArticleDashboardResponseResource updateArticle(
             Long articleId,
-            UpdateArticleRequestResource request
-    ) {
+            UpdateArticleRequestResource request) {
 
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new IllegalArgumentException("Article not found"));
 
         // -------- Basic fields --------
-        if (request.getTitle() != null) {
-            article.setTitle(request.getTitle());
+        if (request.getTitleEn() != null) {
+            article.setTitleEn(request.getTitleEn());
+        }
+
+        if (request.getTitleAr() != null) {
+            article.setTitleAr(request.getTitleAr());
         }
 
         if (request.getCoverImageUrl() != null) {
@@ -187,8 +189,10 @@ public class ArticleService {
 
                         ArticleSection section = ArticleSection.builder()
                                 .sectionOrder(sectionReq.getSectionOrder())
-                                .title(sectionReq.getTitle())
-                                .content(sectionReq.getContent())
+                                .titleEn(sectionReq.getTitleEn())
+                                .titleAr(sectionReq.getTitleAr())
+                                .contentEn(sectionReq.getContentEn())
+                                .contentAr(sectionReq.getContentAr())
                                 .imageUrl(sectionReq.getImageUrl())
                                 .videoUrl(sectionReq.getVideoUrl())
                                 .embedCode(sectionReq.getEmbedCode())
@@ -202,7 +206,6 @@ public class ArticleService {
         return mapToArticleDashboardResponse(updated);
     }
 
-
     public void deleteArticle(Long articleId) {
 
         Article article = articleRepository.findById(articleId)
@@ -212,25 +215,24 @@ public class ArticleService {
         articleRepository.save(article);
     }
 
-
     private ArticleDashboardResponseResource mapToArticleDashboardResponse(Article article) {
         Locale locale = LocaleContextHolder.getLocale();
 
         ArticleDashboardResponseResource response = new ArticleDashboardResponseResource();
         response.setId(article.getId().intValue());
-        response.setTitle(article.getTitle());
+        response.setTitleEn(article.getTitleEn());
+        response.setTitleAr(article.getTitleAr());
         response.setCoverImageUrl(article.getCoverImageUrl());
-        response.setCategoryName("en".equals(locale.getLanguage())?
-                article.getCategory().getNameEn(): article.getCategory().getNameAr());
-        response.setSubCategoryName("en".equals(locale.getLanguage())?
-                article.getSubCategory().getNameEn(): article.getSubCategory().getNameAr());
+        response.setCategoryName("en".equals(locale.getLanguage()) ? article.getCategory().getNameEn()
+                : article.getCategory().getNameAr());
+        response.setSubCategoryName("en".equals(locale.getLanguage()) ? article.getSubCategory().getNameEn()
+                : article.getSubCategory().getNameAr());
         response.setStatus(article.getStatus().name());
         response.setTags(article.getTags());
         response.setPublishedAt(
                 article.getPublishedAt() != null
                         ? article.getPublishedAt()
-                        : null
-        );
+                        : null);
 
         if (article.getSections() != null) {
             response.setSections(
@@ -238,14 +240,15 @@ public class ArticleService {
                         ArticleSectionResponseResource r = new ArticleSectionResponseResource();
                         r.setId(section.getId().intValue());
                         r.setSectionOrder(section.getSectionOrder());
-                        r.setTitle(section.getTitle());
-                        r.setContent(section.getContent());
+                        r.setTitleEn(section.getTitleEn());
+                        r.setTitleAr(section.getTitleAr());
+                        r.setContentEn(section.getContentEn());
+                        r.setContentAr(section.getContentAr());
                         r.setImageUrl(section.getImageUrl());
                         r.setVideoUrl(section.getVideoUrl());
                         r.setEmbedCode(section.getEmbedCode());
                         return r;
-                    }).toList()
-            );
+                    }).toList());
         }
 
         return response;
@@ -254,20 +257,20 @@ public class ArticleService {
     private ArticleResponseResource mapToResponse(Article article) {
         Locale locale = LocaleContextHolder.getLocale();
 
-        CategoryResource cat= new CategoryResource();
-        SubcategoryResource subCat= new SubcategoryResource();
+        CategoryResource cat = new CategoryResource();
+        SubcategoryResource subCat = new SubcategoryResource();
 
         cat.setId(article.getCategory().getId());
-        cat.setName("en".equals(locale.getLanguage())?
-                article.getCategory().getNameEn(): article.getCategory().getNameAr());
+        cat.setName("en".equals(locale.getLanguage()) ? article.getCategory().getNameEn()
+                : article.getCategory().getNameAr());
 
         subCat.setId(article.getSubCategory().getId());
-        subCat.setName("en".equals(locale.getLanguage())?
-                article.getSubCategory().getNameEn(): article.getSubCategory().getNameAr());
+        subCat.setName("en".equals(locale.getLanguage()) ? article.getSubCategory().getNameEn()
+                : article.getSubCategory().getNameAr());
 
         ArticleResponseResource response = new ArticleResponseResource();
         response.setId(article.getId().intValue());
-        response.setTitle(article.getTitle());
+        response.setTitle("en".equals(locale.getLanguage()) ? article.getTitleEn() : article.getTitleAr());
         response.setCoverImageUrl(article.getCoverImageUrl());
         response.setCategory(cat);
         response.setSubCategory(subCat);
@@ -276,36 +279,32 @@ public class ArticleService {
         response.setPublishedAt(
                 article.getPublishedAt() != null
                         ? article.getPublishedAt()
-                        : null
-        );
+                        : null);
 
         if (article.getSections() != null) {
             response.setSections(
                     article.getSections().stream().map(section -> {
-                        io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource r =
-                        new io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource();
+                        io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource r = new io.mawhebty.api.v1.resources.mawhebtyPlatform.ArticleSectionResponseResource();
                         r.setId(section.getId().intValue());
                         r.setSectionOrder(section.getSectionOrder());
-                        r.setTitle(section.getTitle());
-                        r.setContent(section.getContent());
+                        r.setTitle("en".equals(locale.getLanguage()) ? section.getTitleEn() : section.getTitleAr());
+                        r.setContent(
+                                "en".equals(locale.getLanguage()) ? section.getContentEn() : section.getContentAr());
                         r.setImageUrl(section.getImageUrl());
                         r.setVideoUrl(section.getVideoUrl());
                         r.setEmbedCode(section.getEmbedCode());
                         return r;
-                    }).toList()
-            );
+                    }).toList());
         }
 
         return response;
     }
 
-
     public ArticleResponseResource getArticleById(Long articleId) {
-        Article article = articleRepository.findPublishedById(articleId)
+        Article article = articleRepository.findByIdAndStatus(articleId, ArticleStatusEnum.PUBLISHED)
                 .orElseThrow(() -> new IllegalArgumentException("Article not found, or not published"));
 
         return mapToResponse(article);
     }
 
 }
-

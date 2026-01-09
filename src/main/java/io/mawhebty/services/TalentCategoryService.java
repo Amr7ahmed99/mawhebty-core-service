@@ -4,7 +4,6 @@ import io.mawhebty.dtos.requests.InternalServices.CreateTalentCategoryRequest;
 import io.mawhebty.dtos.requests.InternalServices.CreateTalentSubCategoryRequest;
 import io.mawhebty.dtos.responses.TalentCategoryResponse;
 import io.mawhebty.dtos.responses.TalentSubCategoryResponse;
-import io.mawhebty.enums.ParticipationTypesEnum;
 import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.models.ParticipationType;
 import io.mawhebty.models.TalentCategory;
@@ -18,7 +17,6 @@ import io.mawhebty.support.MessageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,10 +32,13 @@ public class TalentCategoryService {
 
     @Transactional
     public void createCategory(CreateTalentCategoryRequest request) {
-        if (talentCategoryRepository.existsByNameArAndNameEn(request.getNameEn(), request.getNameAr())) {
+        String cleanNameEn= request.getNameEn().trim();
+        String cleanNameAr= request.getNameAr().trim();
+        boolean exists = talentCategoryRepository.existsByNameArOrNameEn(cleanNameAr, cleanNameEn);
+        if (exists) {
             throw new BadDataException(
                     messageService.getMessage("category.already.exists",
-                            new Object[]{request.getNameEn(), request.getNameAr()})
+                            new Object[]{cleanNameEn, cleanNameAr})
             );
         }
 
@@ -57,9 +58,10 @@ public class TalentCategoryService {
 
         category = TalentCategory.builder()
                 .partnerId(request.getPartnerId())
-                .nameEn(request.getNameEn())
-                .nameAr(request.getNameAr())
+                .nameEn(cleanNameEn)
+                .nameAr(cleanNameAr)
                 .participationType(type)
+                .imageUrl(request.getImageUrl())
                 .build();
 
         talentCategoryRepository.save(category);
@@ -146,12 +148,13 @@ public class TalentCategoryService {
     }
 
     public List<TalentCategoryResponse> fetchAllCategories(){
-        List<TalentCategoryResponse> categories= talentCategoryRepository.findAll()
+        return talentCategoryRepository.findAll()
                 .stream().map(tc-> TalentCategoryResponse.builder()
                         .id(tc.getPartnerId())
                         .nameAr(tc.getNameAr())
                         .nameEn(tc.getNameEn())
                         .participationTypeId(tc.getParticipationType().getId())
+                        .imageUrl(tc.getImageUrl())
                         .subCategories(
                                 tc.getTalentSubCategories()
                                         .stream()
@@ -164,7 +167,5 @@ public class TalentCategoryService {
                         )
                         .build())
                 .collect(Collectors.toList());
-
-        return categories;
     }
 }

@@ -12,5 +12,6 @@ public class TalentCategoryResponse {
     private String nameEn;
     private String nameAr;
     private Integer participationTypeId;// project_idea, personal_talent, patent
+    private String imageUrl;
     private List<TalentSubCategoryResponse> subCategories;
 }
