@@ -54,7 +54,8 @@ public class ArticlesController extends AbstractMawhebtyDashboardController
 
     private CreateArticleRequest mapToCreateArticleRequest(CreateArticleRequestResource r) {
         CreateArticleRequest req = new CreateArticleRequest();
-        req.setTitle(r.getTitle());
+        req.setTitleEn(r.getTitleEn());
+        req.setTitleAr(r.getTitleAr());
         req.setImageUrl(r.getImageUrl());
         req.setCategoryId(r.getCategoryId());
         req.setSubCategoryId(r.getSubCategoryId());
@@ -67,7 +68,8 @@ public class ArticlesController extends AbstractMawhebtyDashboardController
     private ArticleDashboardResponseResource mapToArticleResponseResource(ArticleDashboardResponseResource r) {
         ArticleDashboardResponseResource resource = new ArticleDashboardResponseResource();
         resource.setId(r.getId());
-        resource.setTitle(r.getTitle());
+        resource.setTitleEn(r.getTitleEn());
+        resource.setTitleAr(r.getTitleAr());
         resource.setCoverImageUrl(r.getCoverImageUrl());
         resource.setCategoryName(r.getCategoryName());
         resource.setSubCategoryName(r.getSubCategoryName());

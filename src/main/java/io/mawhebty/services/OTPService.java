@@ -173,6 +173,7 @@ public class OTPService {
                 userRegistrationResponseDto.setFirstName(profile.getFirstName());
                 userRegistrationResponseDto.setLastName(profile.getLastName());
                 userRegistrationResponseDto.setImageUrl(profile.getProfilePicture());
+                userRegistrationResponseDto.setShortBio(profile.getShortBio());
             }else{
                 ResearcherProfile profile= userProfileService.getResearcherProfileByType(user.getId(), user.getUserType());
                 if(profile == null){
@@ -190,6 +191,7 @@ public class OTPService {
                     userRegistrationResponseDto.setCommercialRegNo(((CompanyResearcherProfile) profile).getCommercialRegNo());
                 }
                 userRegistrationResponseDto.setImageUrl(profile.getProfilePicture());
+                userRegistrationResponseDto.setShortBio(profile.getShortBio());
             }
             userRegistrationResponseDto.setPermissions(jwtService.getFullPermissions(user.getRole()));
         }

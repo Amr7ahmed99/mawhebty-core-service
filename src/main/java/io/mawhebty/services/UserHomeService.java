@@ -1,16 +1,24 @@
 package io.mawhebty.services;
 
+import io.mawhebty.enums.ArticleStatusEnum;
+import io.mawhebty.enums.EventStatus;
 import io.mawhebty.enums.PostStatusEnum;
 import io.mawhebty.enums.PostVisibilityEnum;
 import io.mawhebty.exceptions.UserNotFoundException;
 import io.mawhebty.models.*;
 import io.mawhebty.repository.*;
+import io.mawhebty.repository.specification.ArticleSpecification;
+import io.mawhebty.repository.specification.EventSpecification;
+import io.mawhebty.repository.specification.PostSpecification;
 import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
@@ -27,9 +35,11 @@ public class UserHomeService {
     private final UserRepository userRepository;
     private final MessageService messageService;
     private final UserProfileService userProfileService;
+     private final PostStatusRepository postStatusRepository;
+    private final PostVisibilityRepository postVisibilityRepository;
 
     @Transactional(readOnly = true)
-    public Map<String, Object> getHomeSections(Long userId, Pageable pageable) {
+    public Map<String, Object> getHomeSections(Long userId, Pageable pageable, String search) {
 
         Map<String, Object> result = new HashMap<>();
 
@@ -52,16 +62,50 @@ public class UserHomeService {
             throw new IllegalStateException("No profile found for this user");
         }
 
-        Page<Post> posts = postRepository.findPublicByOwnerIdAndCategoryIdSubCategoryId(userId, PostStatusEnum.PUBLISHED.getId(), PostVisibilityEnum.PUBLIC.getId(),
-            category.getId(), subCategory!=null? subCategory.getId(): null, pageable);
+        // Get PUBLISHED status
+        PostStatus publishedStatus = postStatusRepository.findByName(PostStatusEnum.PUBLISHED.getName())
+                .orElseThrow(() -> new RuntimeException("Published status not found"));
+        
+        // Get PUBLIC visibility
+        PostVisibility publicVisibility = postVisibilityRepository.findByName(PostVisibilityEnum.PUBLIC.getName())
+                .orElseThrow(() -> new RuntimeException("Public visibility not found"));
+
+        String normalizedSearch= (search == null || search.isBlank()) ? null : search.trim();
+
+
+        // Build specification with mandatory filters
+        Specification<Post> spec = Specification.allOf(
+                PostSpecification.hasStatus(publishedStatus),
+                PostSpecification.hasVisibility(publicVisibility),
+                PostSpecification.hasCategory(category.getId()),
+                PostSpecification.hasSubCategory(subCategory!=null? subCategory.getId(): null),
+                PostSpecification.hasNoOwner(userId),
+                PostSpecification.search(normalizedSearch)
+        );
+
+        Specification<Event> eventSpec = Specification.allOf(
+            EventSpecification.hasNoStatus(EventStatus.CANCELLED),
+            EventSpecification.hasCategory(category.getId()),
+            EventSpecification.hasSubCategory(subCategory != null ? subCategory.getId() : null),
+            EventSpecification.search(normalizedSearch)
+        );
+
+        Specification<Article> articleSpec = Specification.allOf(
+            ArticleSpecification.hasCategory(category.getId()),
+            ArticleSpecification.hasSubCategory(subCategory != null ? subCategory.getId() : null),
+            ArticleSpecification.hasStatus(ArticleStatusEnum.PUBLISHED),
+            ArticleSpecification.search(normalizedSearch)
+        );
+
+
+        Page<Post> posts = postRepository.findAll(spec, pageable);
         result.put("posts", mapToPostResponse(posts.getContent()));
 
-        Page<Event> events = eventRepository.findByCategoryIdSubCategoryId(category.getId(),
-                subCategory!=null? subCategory.getId(): null, pageable);
+        Page<Event> events = eventRepository.findAll(eventSpec, pageable);
         result.put("events", mapToEventResponse(events.getContent()));
 
-        Page<Article> articles = articleRepository.findByCategoryIdSubCategoryId(category.getId(),
-                subCategory!=null? subCategory.getId(): null, pageable);
+
+        Page<Article> articles = articleRepository.findAll(articleSpec, pageable);
         result.put("articles", mapToArticleResponse(articles.getContent()));
 
         return result;
@@ -73,19 +117,29 @@ public class UserHomeService {
             postMap.put("id", post.getId());
             postMap.put("owner", this.getOwnerInfo(post.getOwnerUser()));
             postMap.put("title", post.getTitle());
-            postMap.put("description", post.getCaption());
+            postMap.put("caption", post.getCaption());
             postMap.put("image_url", post.getMediaUrl());
+            postMap.put("category_name", "en".equals(LocaleContextHolder.getLocale().getLanguage())?
+                    post.getCategory().getNameEn(): post.getCategory().getNameAr());
+            postMap.put("sub_category_name", post.getSubCategory()!=null?
+                    ("en".equals(LocaleContextHolder.getLocale().getLanguage())?
+                            post.getSubCategory().getNameEn(): post.getSubCategory().getNameAr()): null);
             postMap.put("date", post.getCreatedAt().toString());
+            postMap.put("is_saved", false); //TODO: Placeholder, implement logic to check if saved
+            postMap.put("likes_count", 0); // TODO: Placeholder, implement logic to get likes count
             return postMap;
         }).collect(Collectors.toList());
     }
 
     private List<Map<String, Object>> mapToEventResponse(List<Event> events) {
+        Locale locale = LocaleContextHolder.getLocale();
         return events.stream().map(event -> {
             Map<String, Object> eventMap = new HashMap<>();
             eventMap.put("id", event.getId());
-            eventMap.put("title", event.getTitle());
-            eventMap.put("description", event.getDescription());
+            eventMap.put("title", "en".equals(locale.getLanguage())?
+                    event.getTitleEn(): event.getTitleAr());
+            eventMap.put("description", "en".equals(locale.getLanguage())?
+                    event.getDescriptionEn(): event.getDescriptionAr());
             eventMap.put("location", event.getLocation());
             eventMap.put("location_coordinates", event.getLocationCoordinates());
             eventMap.put("image_url", event.getCoverImageUrl());
@@ -99,7 +153,8 @@ public class UserHomeService {
         return articles.stream().map(article -> {
             Map<String, Object> articleMap = new HashMap<>();
             articleMap.put("id", article.getId());
-            articleMap.put("title", article.getTitle());
+            articleMap.put("title", "en".equals(locale.getLanguage())?
+                    article.getTitleEn(): article.getTitleAr());
             articleMap.put("date", article.getPublishedAt() != null ?
                     article.getPublishedAt().toString() : article.getCreatedAt().toString());
             articleMap.put("image_url", article.getCoverImageUrl());

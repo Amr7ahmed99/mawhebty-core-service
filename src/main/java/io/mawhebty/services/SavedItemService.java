@@ -1,5 +1,6 @@
 package io.mawhebty.services;
 
+import io.mawhebty.enums.ArticleStatusEnum;
 import io.mawhebty.enums.SavedItemTypeEnum;
 import io.mawhebty.exceptions.BadDataException;
 import io.mawhebty.exceptions.ResourceNotFoundException;
@@ -9,6 +10,10 @@ import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
@@ -37,19 +42,33 @@ public class SavedItemService {
 
         SavedItemTypeEnum type = SavedItemTypeEnum.fromValue(itemType);
 
+        Pageable pageable = PageRequest.of(offset, perPage, Sort.by("id").descending());
+
         switch (type) {
             case POST:
-                List<SavedItem> savedPosts = savedItemRepository.findSavedPostsWithOwner(userId, perPage, offset);
+                Page<SavedItem> savedPosts = savedItemRepository.findSavedPostsWithOwner(userId, pageable);
+                result.put("post_total_items", savedPosts.getTotalElements());
+                result.put("post_total_pages", savedPosts.getTotalPages());
+                result.put("post_current_page", savedPosts.getNumber() + 1);
+                result.put("post_per_page", savedPosts.getSize());
                 result.put("posts", mapToPostResponse(savedPosts));
                 break;
 
             case EVENT:
-                List<SavedItem> savedEvents = savedItemRepository.findSavedEvents(userId, perPage, offset);
+                Page<SavedItem> savedEvents = savedItemRepository.findSavedEvents(userId, pageable);
+                result.put("event_total_items", savedEvents.getTotalElements());
+                result.put("event_total_pages", savedEvents.getTotalPages());
+                result.put("event_current_page", savedEvents.getNumber() + 1);
+                result.put("event_per_page", savedEvents.getSize());
                 result.put("events", mapToEventResponse(savedEvents));
                 break;
 
             case ARTICLE:
-                List<SavedItem> savedArticles = savedItemRepository.findSavedArticles(userId, perPage, offset);
+                Page<SavedItem> savedArticles = savedItemRepository.findSavedArticles(userId, pageable);
+                result.put("article_total_items", savedArticles.getTotalElements());
+                result.put("article_total_pages", savedArticles.getTotalPages());
+                result.put("article_current_page", savedArticles.getNumber() + 1);
+                result.put("article_per_page", savedArticles.getSize());
                 result.put("articles", mapToArticleResponse(savedArticles));
                 break;
 
@@ -138,7 +157,7 @@ public class SavedItemService {
                 break;
 
             case ARTICLE:
-                articleRepository.findPublishedById(itemId)
+                articleRepository.findByIdAndStatus(itemId, ArticleStatusEnum.PUBLISHED)
                         .orElseThrow(() -> new IllegalArgumentException(
                                 messageService.getMessage("article.not.found", new Object[]{itemId})
                         ));
@@ -146,8 +165,8 @@ public class SavedItemService {
         }
     }
 
-    private List<Map<String, Object>> mapToPostResponse(List<SavedItem> savedItems) {
-        return savedItems.stream().map(savedItem -> {
+    private List<Map<String, Object>> mapToPostResponse(Page<SavedItem> savedItems) {
+        return savedItems.getContent().stream().map(savedItem -> {
             Post post = savedItem.getPost();
             Map<String, Object> postMap = new HashMap<>();
             postMap.put("id", post.getId());
@@ -155,22 +174,32 @@ public class SavedItemService {
             postMap.put("owner", this.getOwnerInfo(post.getOwnerUser()));
 
             postMap.put("title", post.getTitle());
-            postMap.put("description", post.getCaption());
+            postMap.put("caption", post.getCaption());
             postMap.put("image_url", post.getMediaUrl());
             postMap.put("date", post.getCreatedAt().toString());
             postMap.put("saved_at", savedItem.getCreatedAt().toString());
+            postMap.put("category_name", "en".equals(LocaleContextHolder.getLocale().getLanguage())?
+                    post.getCategory().getNameEn(): post.getCategory().getNameAr());
+            postMap.put("sub_category_name", post.getSubCategory()!=null?
+                    ("en".equals(LocaleContextHolder.getLocale().getLanguage())?
+                            post.getSubCategory().getNameEn(): post.getSubCategory().getNameAr()): null);          
+            postMap.put("is_saved", false); //TODO: Placeholder, implement logic to check if saved
+            postMap.put("likes_count", 0); // TODO: Placeholder, implement logic to get likes count
 
             return postMap;
         }).collect(Collectors.toList());
     }
 
-    private List<Map<String, Object>> mapToEventResponse(List<SavedItem> savedItems) {
+    private List<Map<String, Object>> mapToEventResponse(Page<SavedItem> savedItems) {
+        Locale locale = LocaleContextHolder.getLocale();
         return savedItems.stream().map(savedItem -> {
             Event event = savedItem.getEvent();
             Map<String, Object> eventMap = new HashMap<>();
             eventMap.put("id", event.getId());
-            eventMap.put("title", event.getTitle());
-            eventMap.put("description", event.getDescription());
+            eventMap.put("title", "en".equals(locale.getLanguage())?
+                    event.getTitleEn(): event.getTitleAr());
+            eventMap.put("description", "en".equals(locale.getLanguage())?
+                    event.getDescriptionEn(): event.getDescriptionAr());
             eventMap.put("location", event.getLocation());
             eventMap.put("location_coordinates", event.getLocationCoordinates());
             eventMap.put("image_url", event.getCoverImageUrl());
@@ -181,13 +210,14 @@ public class SavedItemService {
         }).collect(Collectors.toList());
     }
 
-    private List<Map<String, Object>> mapToArticleResponse(List<SavedItem> savedItems) {
+    private List<Map<String, Object>> mapToArticleResponse(Page<SavedItem> savedItems) {
         Locale locale = LocaleContextHolder.getLocale();
         return savedItems.stream().map(savedItem -> {
             Article article = savedItem.getArticle();
             Map<String, Object> articleMap = new HashMap<>();
             articleMap.put("id", article.getId());
-            articleMap.put("title", article.getTitle());
+            articleMap.put("title", "en".equals(locale.getLanguage())?
+                    article.getTitleEn(): article.getTitleAr());
             articleMap.put("date", article.getPublishedAt() != null ?
                     article.getPublishedAt().toString() : article.getCreatedAt().toString());
             articleMap.put("image_url", article.getCoverImageUrl());

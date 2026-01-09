@@ -29,11 +29,15 @@ public class Event extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String title;
+    @Column(name = "title_en", nullable = false)
+    private String titleEn;
+    @Column(name = "title_ar", nullable = false)
+    private String titleAr;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "description_en", columnDefinition = "TEXT")
+    private String descriptionEn;
+    @Column(name = "description_ar", columnDefinition = "TEXT")
+    private String descriptionAr;
 
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;

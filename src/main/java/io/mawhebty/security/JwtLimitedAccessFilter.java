@@ -27,11 +27,14 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
     
     // List of public endpoints that don't require token checking
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
-        "/api/v1/auth/register",
-        "/api/v1/auth/login", 
-        "/api/v1/auth/verify-otp",
-        "/api/v1/auth/refresh-token",
-        "/api/v1/users/",
+//        "/api/v1/auth/register",
+//        "/api/v1/auth/login",
+//        "/api/v1/auth/verify-otp",
+//        "/api/v1/auth/refresh-token",
+        "/api/v1/auth",
+        "/api/v1/users",
+        "/api/v1/categories",
+        "/api/v1/talent",
         "/api/v1/public/",
         "/oauth2/authorization",
         "/login/oauth2/code",
@@ -132,6 +135,7 @@ public class JwtLimitedAccessFilter extends OncePerRequestFilter {
                path.startsWith("/api/v1/mawhebty-platform/categories")||
                path.startsWith("/api/v1/mawhebty-platform/events")||
                path.startsWith("/api/v1/mawhebty-platform/articles")||
+               path.startsWith("/api/v1/mawhebty-platform/posts")||
                path.startsWith("/api/v1/mawhebty-platform/home/sections");
     }
     

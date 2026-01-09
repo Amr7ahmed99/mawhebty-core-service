@@ -284,9 +284,13 @@ components:
       properties:
         id:
           type: integer
-        title:
+        title_en:
           type: string
-        description:
+        title_ar:
+          type: string
+        description_en:
+          type: string
+        description_ar:
           type: string
         event_date:
           type: string
@@ -326,16 +330,19 @@ components:
     CreateEventRequest:
       type: object
       required:
-        - title
         - event_date
         - location
         - category_id
       properties:
-        title:
+        title_en:
           type: string
-          minLength: 3
           maxLength: 255
-        description:
+        title_ar:
+          type: string
+          maxLength: 255
+        description_en:
+          type: string
+        description_ar:
           type: string
         event_date:
           type: string
@@ -382,11 +389,15 @@ components:
     UpdateEventRequest:
       type: object
       properties:
-        title:
+        title_en:
           type: string
-          minLength: 3
           maxLength: 255
-        description:
+        title_ar:
+          type: string
+          maxLength: 255
+        description_en:
+          type: string
+        description_ar:
           type: string
         event_date:
           type: string
@@ -409,12 +420,10 @@ components:
           enum: [GENERAL, WORKSHOP, CONFERENCE, NETWORKING]
         max_attendees:
           type: integer
-          minimum: 1
         is_free:
           type: boolean
         ticket_price:
           type: number
-          minimum: 0
         registration_url:
           type: string
         event_link:
@@ -426,17 +435,17 @@ components:
     CreateArticleRequest:
       type: object
       required:
-        - title
         - category_id
         - sub_category_id
       properties:
-        title:
+        title_en:
           type: string
-          minLength: 3
+          maxLength: 255
+        title_ar:
+          type: string
           maxLength: 255
         image_url:
           type: string
-
         category_id:
           type: integer
         sub_category_id:
@@ -444,7 +453,7 @@ components:
         status:
           type: string
           enum: [ PUBLISHED, DELETED ]
-          default: DRAFT
+          default: PUBLISHED
         tags:
           type: string
         published_at:
@@ -459,19 +468,22 @@ components:
       type: object
       required:
         - section_order
-        - content
       properties:
         section_order:
           type: integer
           minimum: 1
-        title:
+        title_en:
           type: string
           maxLength: 500
-        content:
+        title_ar:
+          type: string
+          maxLength: 500
+        content_en:
+          type: string
+        content_ar:
           type: string
         image_url:
           type: string
-
         video_url:
           type: string
 
@@ -483,7 +495,9 @@ components:
       properties:
         id:
           type: integer
-        title:
+        title_en:
+          type: string
+        title_ar:
           type: string
         cover_image_url:
           type: string
@@ -510,9 +524,13 @@ components:
           type: integer
         section_order:
           type: integer
-        title:
+        title_en:
           type: string
-        content:
+        title_ar:
+          type: string
+        content_en:
+          type: string
+        content_ar:
           type: string
         image_url:
           type: string
@@ -524,9 +542,11 @@ components:
     UpdateArticleRequest:
       type: object
       properties:
-        title:
+        title_en:
           type: string
-          minLength: 3
+          maxLength: 255
+        title_ar:
+          type: string
           maxLength: 255
         cover_image_url:
           type: string
@@ -537,6 +557,7 @@ components:
         status:
           type: string
           enum: [ PUBLISHED, DELETED ]
+          default: PUBLISHED
         tags:
           type: string
         published_at:
@@ -555,10 +576,13 @@ components:
         section_order:
           type: integer
           minimum: 1
-        title:
+        title_en:
           type: string
-          maxLength: 500
-        content:
+        title_ar:
+          type: string
+        content_en:
+          type: string
+        content_ar:
           type: string
         image_url:
           type: string

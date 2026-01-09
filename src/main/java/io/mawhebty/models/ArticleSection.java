@@ -28,11 +28,17 @@ public class ArticleSection extends BaseEntity {
     @Column(name = "section_order", nullable = false)
     private Integer sectionOrder;
 
-    @Column(name = "title")
-    private String title;
+    @Column(name = "title_en")
+    private String titleEn;
 
-    @Column(columnDefinition = "TEXT")
-    private String content;
+    @Column(name = "title_ar")
+    private String titleAr;
+
+    @Column(name = "content_en", columnDefinition = "TEXT")
+    private String contentEn;
+
+    @Column(name = "content_ar", columnDefinition = "TEXT")
+    private String contentAr;
 
     @Column(name = "image_url")
     private String imageUrl;

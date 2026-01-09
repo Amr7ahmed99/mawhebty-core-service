@@ -9,7 +9,6 @@ import io.mawhebty.exceptions.ResourceNotFoundException;
 import io.mawhebty.models.User;
 import io.mawhebty.services.EventService;
 import io.mawhebty.services.auth.CurrentUserService;
-import io.mawhebty.support.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,10 +30,9 @@ public class EventsController extends AbstractMawhebtyPlatformController
 
     private final EventService eventService;
     private final CurrentUserService currentUserService;
-    private final MessageService messageService;
 
     @Override
-    public ResponseEntity<EventListResponseResource> getEvents(
+    public ResponseEntity<PaginatedListResponseResource> getEvents(
             String status,
             String type,
             Boolean isFree,
@@ -67,8 +66,9 @@ public class EventsController extends AbstractMawhebtyPlatformController
                     sortBy
             );
 
+            
             // Convert to API resource
-            EventListResponseResource apiResponse = mapToEventListResponseResource(response);
+            PaginatedListResponseResource apiResponse = mapToEventListResponseResource(response);
 
             log.info("Events retrieved successfully for user: {}", currentUser.getId());
             return ResponseEntity.ok(apiResponse);
@@ -139,8 +139,8 @@ public class EventsController extends AbstractMawhebtyPlatformController
         return resource;
     }
 
-    private EventListResponseResource mapToEventListResponseResource(EventListResponse response) {
-        EventListResponseResource resource = new EventListResponseResource();
+    private PaginatedListResponseResource mapToEventListResponseResource(EventListResponse response) {
+        PaginatedListResponseResource resource = new PaginatedListResponseResource();
         resource.setTotalItems(BigDecimal.valueOf(response.getTotal()));
         resource.setCurrentPage(response.getPage());
         resource.setPerPage(response.getPerPage());
@@ -150,7 +150,7 @@ public class EventsController extends AbstractMawhebtyPlatformController
         List<EventListItemResource> eventResources = response.getEvents().stream()
                 .map(this::mapToEventListItemResponseResource)
                 .collect(Collectors.toList());
-        resource.setEvents(eventResources);
+        resource.setData(eventResources);
 
         return resource;
     }

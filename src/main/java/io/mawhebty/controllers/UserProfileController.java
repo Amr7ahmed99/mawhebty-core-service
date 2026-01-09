@@ -5,6 +5,7 @@ import io.mawhebty.api.v1.mawhebtyPlatform.MawhebtyPlatformUserProfileApi;
 import io.mawhebty.api.v1.resources.mawhebtyPlatform.*;
 import io.mawhebty.exceptions.UserNotFoundException;
 import io.mawhebty.models.*;
+import io.mawhebty.services.PostService;
 import io.mawhebty.services.UserFollowService;
 import io.mawhebty.services.UserProfileService;
 import io.mawhebty.services.auth.CurrentUserService;
@@ -17,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Map;
 
@@ -30,6 +32,7 @@ public class UserProfileController extends AbstractMawhebtyPlatformController
     private final UserFollowService userFollowService;
     private final CurrentUserService currentUserService;
     private final MessageService messageService;
+    private final PostService postService;
 
     @Override
     public ResponseEntity<UserProfileDataResponseResource> userProfile() {
@@ -205,5 +208,27 @@ public class UserProfileController extends AbstractMawhebtyPlatformController
 
     private String getLocalizedName(String nameEn, String nameAr, Locale locale) {
         return "ar".equals(locale.getLanguage()) ? nameAr : nameEn;
+    }
+
+    @Override
+    public ResponseEntity<PaginatedListResponseResource> getUserProfilePosts(Integer page, Integer perPage){
+        try {
+            // Get current authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = currentUserService.getCurrentUser(authentication);
+
+            // Get posts by user ID
+            PaginatedListResponseResource response = postService.getPostsByUserId(
+                    currentUser.getId().longValue(),
+                    page,
+                    perPage
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error retrieving posts by user ID", e);
+            throw e;
+        }
     }
 }

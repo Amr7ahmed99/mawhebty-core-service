@@ -15,8 +15,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,21 +92,39 @@ public class UserSavedItemsController extends AbstractMawhebtyPlatformController
         if (savedItemsData.containsKey("posts")) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> posts = (List<Map<String, Object>>) savedItemsData.get("posts");
-            response.setPosts(mapToSavedPostResources(posts));
+            PaginatedListResponseResource paginatedListResponseResource = new PaginatedListResponseResource();
+            paginatedListResponseResource.setTotalItems(BigDecimal.valueOf((Long) savedItemsData.get("post_total_items")));
+            paginatedListResponseResource.setTotalPages((Integer) savedItemsData.get("post_total_pages"));
+            paginatedListResponseResource.setCurrentPage((Integer) savedItemsData.get("post_current_page"));
+            paginatedListResponseResource.setPerPage((Integer) savedItemsData.get("post_per_page"));
+            paginatedListResponseResource.setData(mapToSavedPostResources(posts));
+            response.setPosts(paginatedListResponseResource);
         }
 
         // Add events
         if (savedItemsData.containsKey("events")) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> events = (List<Map<String, Object>>) savedItemsData.get("events");
-            response.setEvents(mapToSavedEventResources(events));
+            PaginatedListResponseResource paginatedListResponseResource = new PaginatedListResponseResource();
+            paginatedListResponseResource.setTotalItems(BigDecimal.valueOf((Long) savedItemsData.get("event_total_items")));
+            paginatedListResponseResource.setTotalPages((Integer) savedItemsData.get("event_total_pages"));
+            paginatedListResponseResource.setCurrentPage((Integer) savedItemsData.get("event_current_page"));
+            paginatedListResponseResource.setPerPage((Integer) savedItemsData.get("event_per_page"));
+            paginatedListResponseResource.setData(mapToSavedEventResources(events));
+            response.setEvents(paginatedListResponseResource);
         }
 
         // Add articles
         if (savedItemsData.containsKey("articles")) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> articles = (List<Map<String, Object>>) savedItemsData.get("articles");
-            response.setArticles(mapToSavedArticleResources(articles));
+            PaginatedListResponseResource paginatedListResponseResource = new PaginatedListResponseResource();
+            paginatedListResponseResource.setTotalItems(BigDecimal.valueOf((Long) savedItemsData.get("article_total_items")));
+            paginatedListResponseResource.setTotalPages((Integer) savedItemsData.get("article_total_pages"));
+            paginatedListResponseResource.setCurrentPage((Integer) savedItemsData.get("article_current_page"));
+            paginatedListResponseResource.setPerPage((Integer) savedItemsData.get("article_per_page"));
+            paginatedListResponseResource.setData(mapToSavedArticleResources(articles));
+            response.setArticles(paginatedListResponseResource);
         }
 
         return response;
@@ -115,23 +136,26 @@ public class UserSavedItemsController extends AbstractMawhebtyPlatformController
         for (Map<String, Object> postData : posts) {
             SavedPostResource postResource = new SavedPostResource();
             postResource.setId(((Long) postData.get("id")).intValue());
-
+            
             // Set owner
             @SuppressWarnings("unchecked")
             Map<String, Object> ownerData = (Map<String, Object>) postData.get("owner");
             PostOwnerResource ownerResource = new PostOwnerResource();
-            ownerResource.setId(((Long) ownerData.get("id")).intValue());
+            ownerResource.setId(BigDecimal.valueOf((Long) ownerData.get("id")));
             ownerResource.setFirstName((String) ownerData.get("first_name"));
             ownerResource.setLastName((String) ownerData.get("last_name"));
             ownerResource.setImageUrl((String) ownerData.get("image_url"));
             postResource.setOwner(ownerResource);
 
             postResource.setTitle((String) postData.get("title"));
-            postResource.setDescription((String) postData.get("description"));
+            postResource.setCaption((String) postData.get("caption"));
             postResource.setImageUrl((String) postData.get("image_url"));
             postResource.setDate(LocalDateTime.parse((String) postData.get("date")));
             postResource.setSavedAt(LocalDateTime.parse((String)  postData.get("saved_at")));
-
+            postResource.setCategoryName((String) postData.get("category_name"));
+            postResource.setSubCategoryName((String) postData.get("sub_category_name"));
+            postResource.setIsSaved((boolean) postData.get("is_saved"));
+            postResource.setLikesCount((Integer) postData.get("likes_count"));
             postResources.add(postResource);
         }
 
